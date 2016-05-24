@@ -12,7 +12,7 @@ from IPython import get_ipython
 import zmq
 
 from .base_machine import BaseMachine
-from .util import StoppableThread
+from .util import StoppableThread, mkdir_p
 
 
 class MachineConsumer(StoppableThread):
@@ -24,6 +24,7 @@ class MachineConsumer(StoppableThread):
         with open(get_ipython().config["IPKernelApp"]["connection_file"]) as f:
             config = json.load(f)
             self._kernel_key = config["key"]
+        mkdir_p("/tmp/timbr-machine") # NOTE: Not Windows Safe (but should be)
         self.initialize_pub_stream("ipc:///tmp/timbr-machine/{}".format(self._kernel_key))
 
     def initialize_pub_stream(self, endpoint):
@@ -36,7 +37,8 @@ class MachineConsumer(StoppableThread):
             try:
                 # NOTE: self.get should never throw exceptions from inside the dask
                 output = self.machine.get(block=True, timeout=0.1)
-                print(output)
+                # print(output)
+                self._socket.send_multipart(output)
                 # TODO: serialize and send over the zmq socket (self._socket)
             except Empty:
                 pass

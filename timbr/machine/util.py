@@ -55,3 +55,13 @@ def json_serializable_exception(e, extra_data={}):
     extra_data["_exception"] = str(e)
     #extra_data["_exception_dict"] = e.__dict__
     return(extra_data)
+
+import os, errno
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc: # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else: raise
