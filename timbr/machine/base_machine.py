@@ -19,35 +19,7 @@ import inspect
 import zmq
 import json
 
-def identity(x):
-    return x
-
-def wrap_transform(fn):
-    """
-    This function returns a new function that accepts an arbitrary number of arguments
-    and calls the wrapped function with the number of arguments that it supports. For
-    example:
-
-    def f(a, b):
-        ...
-
-    g = wrap_transform(f)
-
-    assert g(a, b, c, d) == f(a, b)
-
-    """
-    assert callable(fn)
-    try:
-        info = inspect.getargspec(fn)
-        nargs = len(info.args)
-    except TypeError:
-        # fallback to pipeline mode
-        nargs = 1
-    def wrapped(*args, **kwargs):
-        # print "called with {}".format(str(args))
-        return fn(*args[:nargs])
-    return wrapped
-
+from .util import identity, wrap_transform
 
 class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
@@ -63,8 +35,10 @@ class BaseMachine(object):
         # NOTE: Non-blocking
         self.q.put(msg, False)
 
-    def get(self):
-        output = self._getter(self.dsk, ["oid", "in"] + ["f{}".format(i) for i in xrange(self.stages)])
+    def get(self, block=False, timeout=0.5):
+        dsk = dict(self.dsk)
+        dsk["in"] = (self.q.get, block, timeout)
+        output = self._getter(dsk, ["oid", "in"] + ["f{}".format(i) for i in xrange(self.stages)])
         return output
 
     def __len__(self):
@@ -101,7 +75,6 @@ class BaseMachine(object):
         if self._dsk is None or self.dirty:
             self._dsk = {}
             self._dsk["oid"] = (ObjectId,)
-            self._dsk["in"] = (self.q.get, False)
             for i in xrange(self.stages):
                 fkey = "f{}".format(i)
                 self._dsk[fkey] = tuple([self.tbl.get(fkey, wrap_transform(identity))] +
