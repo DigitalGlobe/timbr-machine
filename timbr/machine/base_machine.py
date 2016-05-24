@@ -2,8 +2,9 @@ from IPython import get_ipython
 
 from multiprocessing.pool import ThreadPool
 import dask as da
-#from dask.async import get_sync as get
-from dask.threaded import get # NOTE: sync mode wil likely be faster
+# NOTE: sync mode wil likely be faster
+from dask.async import get_sync as get
+# from dask.threaded import get
 
 _pool = ThreadPool()
 da.set_options(pool=_pool)
