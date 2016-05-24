@@ -37,9 +37,10 @@ class MachineConsumer(StoppableThread):
             try:
                 # NOTE: self.get should never throw exceptions from inside the dask
                 output = self.machine.get(block=True, timeout=0.1)
+                hdr = output[0]
+                msg = "[{}]".format(",".join(output[1:]))
                 # print(output)
-                self._socket.send_multipart(output)
-                # TODO: serialize and send over the zmq socket (self._socket)
+                self._socket.send_multipart([hdr, msg.encode("utf-8")])
             except Empty:
                 pass
 
