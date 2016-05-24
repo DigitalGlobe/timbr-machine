@@ -1,11 +1,15 @@
 from threading import Thread
 import time
-from IPython import get_ipython
+import json
 
 try:
     from Queue import Empty, Full, Queue # Python 2
 except ImportError:
     from queue import Empty, Full, Queue # Python 3
+
+from IPython import get_ipython
+
+import zmq
 
 from .base_machine import BaseMachine
 from .util import StoppableThread
@@ -31,10 +35,12 @@ class MachineConsumer(StoppableThread):
         while not self.stopped():
             try:
                 # NOTE: self.get should never throw exceptions from inside the dask
-                output = machine.get(block=True, timeout=0.1)
+                output = self.machine.get(block=True, timeout=0.1)
+                print(output)
                 # TODO: serialize and send over the zmq socket (self._socket)
             except Empty:
                 pass
+
 
 class SourceConsumer(StoppableThread):
     def __init__(self, machine, generator):
@@ -48,7 +54,7 @@ class SourceConsumer(StoppableThread):
                 # NOTE: next() may block which is okay but put may raise Full
                 # which will interrupt the source
                 msg = self.g.next()
-                machine.put(msg)
+                self.machine.put(msg)
             except (StopIteration, Full):
                 break
 
@@ -57,6 +63,7 @@ class Machine(BaseMachine):
     def __init__(self, stages=8, bufsize=1024):
         super(Machine, self).__init__(stages, bufsize)
         self._consumer_thread = None
+        self._running = False
 
     def start(self):
         if not self._running:
