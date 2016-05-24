@@ -44,6 +44,14 @@ def wrap_transform(fn):
         # fallback to pipeline mode
         nargs = 1
     def wrapped(*args, **kwargs):
-        print("called with {}".format(str(args)))
+        # print("called with {}".format(str(args)))
         return fn(*args[:nargs])
     return wrapped
+
+
+def json_serializable_exception(e, extra_data={}):
+    #extra_data["_traceback"] = tb.format_tb(e)
+    #extra_data["_exception"] = tb.format_exception_only(e)
+    extra_data["_exception"] = str(e)
+    #extra_data["_exception_dict"] = e.__dict__
+    return(extra_data)
