@@ -1,0 +1,22 @@
+package:
+  name: timbr-machine
+  version: 0.1
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - setuptools
+    - dask
+    - ipython
+    - pymongo >=2.8
+
+  run:
+    - dask
+    - ipython
+    - pymongo >=2.8
+
+about:
+  home: https://bitbucket.org/timbr-io/timbr-machine
+  license: Private
