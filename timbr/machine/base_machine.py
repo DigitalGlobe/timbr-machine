@@ -16,6 +16,7 @@ except ImportError:
 
 from bson.objectid import ObjectId
 from functools import wraps # should be used but isn't currently
+from collections import defaultdict
 import inspect
 
 import zmq
@@ -30,17 +31,40 @@ def json_serialize(obj):
     except TypeError as te:
         return json.dumps(json_serializable_exception(te))
 
+class MachineTransform(object):
+    def __init__(self, machine, fn, pos):
+        self.machine = machine
+        self.fn = wrap_transform(fn)
+        self.ref = "f{}".format(pos)
+
+    def on_exception(self, e):
+        self.machine._status['Errored'].append({self.ref: {"oid": self.machine._status["CurrentOID"], "err": e.__repr__(), 
+            "errtime": time_from_objectidstr(self.machine._status["CurrentOID"])}})
+
+    def on_success(self):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        try:
+            return self.fn(*args, **kwargs)
+            self.on_success()
+        except Exception as e:
+            self.on_exception(e)
+
+def time_from_objectidstr(oid):
+    return ObjectId(oid).generation_time.isoformat()
+
 
 class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
         self.q = Queue(bufsize)
         self.tbl = {}
+        self._status = {"CurrentOID": None, "LastOID": None, "Processed": 0, "Errored": [], "QueueSize": self.q.qsize()}
         self.stages = stages
         self._dsk = None
         self._dirty = True
         self._getter = get
         self._socket = None
-
 
         self.serialize_fn = json_serialize
 
@@ -60,13 +84,18 @@ class BaseMachine(object):
         output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)])
         return output
 
+    @property
+    def status(self):
+        self._status["CurrentTime"] = time_from_objectidstr(self._status["CurrentOID"])
+        return self._status
+
     def __len__(self):
         return stages
 
     def __setitem__(self, pos, fn):
         assert isinstance(pos, (int, long))
         assert pos >=0 and pos < self.stages
-        wrapped_fn = wrap_transform(fn)
+        wrapped_fn = MachineTransform(self, fn, pos)
         self.tbl["f{}".format(pos)] = wrapped_fn
         self.dirty = True
 
