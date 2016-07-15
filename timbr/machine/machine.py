@@ -37,10 +37,13 @@ class MachineConsumer(StoppableThread):
             try:
                 # NOTE: self.get should never throw exceptions from inside the dask
                 output = self.machine.get(block=True, timeout=0.1)
+                self.machine._status['LastOID'] = self.machine._status['CurrentOID']
                 hdr = output[0]
                 msg = "[{}]".format(",".join(output[1:]))
                 # print(output)
                 self._socket.send_multipart([hdr, msg.encode("utf-8")])
+                self.machine._status['CurrentOID'] = hdr
+                self.machine._status['Processed'] = self.machine._status['Processed'] + 1
             except Empty:
                 pass
 
