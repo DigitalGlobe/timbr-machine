@@ -65,3 +65,15 @@ def mkdir_p(path):
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else: raise
+
+def display_status(status, detailed=False, inspect=None):
+    from IPython.display import Image, HTML, display
+    
+    stats = MACHINE.status
+    s0 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Ingest Time -- {}</b></div>".format(stats['CurrentTime'])
+    s1 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Ingest ID -- {}</b></div>".format(stats['CurrentOID'])
+    s2 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Total Datum Processed -- {}</b></div>".format(stats['Processed'])
+    s3 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Queue Depth -- {}</b></div>".format(stats["QueueSize"])
+    display(HTML("\n".join([s0, s1, s2, s3])))
+
+    headers = ["Function", "Number of Errors", "Error Types"]

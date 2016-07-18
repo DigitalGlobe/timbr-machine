@@ -23,6 +23,7 @@ import zmq
 import json
 
 from .util import identity, wrap_transform, json_serializable_exception
+from IPython.display import Image, HTML, display
 
 
 def json_serialize(obj):
@@ -139,3 +140,11 @@ class BaseMachine(object):
             self._dsk.update(self.REFERENCE_DASK)
             self.dirty = False
         return self._dsk
+
+    def display_status(self, detailed=False, inspect=None):   
+        stats = self.status
+        s0 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Ingest Time -- {}</b></div>".format(stats['CurrentTime'])
+        s1 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Ingest ID -- {}</b></div>".format(stats['CurrentOID'])
+        s2 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Total Datum Processed -- {}</b></div>".format(stats['Processed'])
+        s3 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Queue Depth -- {}</b></div>".format(stats["QueueSize"])
+        display(HTML("\n".join([s0, s1, s2, s3])))
