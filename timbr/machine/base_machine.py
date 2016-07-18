@@ -23,7 +23,7 @@ import zmq
 import json
 
 from .util import identity, wrap_transform, json_serializable_exception
-from IPython.display import Image, HTML, display
+from IPython.display import HTML, display
 
 
 def json_serialize(obj):
