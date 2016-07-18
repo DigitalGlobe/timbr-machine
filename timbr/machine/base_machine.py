@@ -52,6 +52,9 @@ class MachineTransform(object):
         except Exception as e:
             self.on_exception(e)
 
+    def __repr__(self):
+
+
 def time_from_objectidstr(oid):
     return ObjectId(oid).generation_time.isoformat()
 
@@ -106,7 +109,7 @@ class BaseMachine(object):
         return self.tbl["f{}".format(pos)]
 
     def __missing__(self, pos):
-        return wrap_transform(identity)
+        return MachineTransform(identity)
 
     def __delitem__(self, pos):
         assert isinstance(pos, (int, long))
