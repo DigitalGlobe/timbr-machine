@@ -1,1 +1,1 @@
-from .machine import MachineFactory as Machine
+from .machine import Machine
