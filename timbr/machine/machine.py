@@ -13,6 +13,9 @@ import zmq
 
 from .base_machine import BaseMachine
 from .util import StoppableThread, mkdir_p
+from .status import statushook, BaseStatus
+import functools
+from types import FunctionType
 
 
 class MachineConsumer(StoppableThread):
@@ -65,8 +68,8 @@ class SourceConsumer(StoppableThread):
                 break
 
 
-class Machine(BaseMachine):
-    def __init__(self, stages=8, bufsize=1024):
+class _Machine(BaseMachine):
+    def __init__(self, stages=8, bufsize=1024, statusMixin=BaseStatus, eventMixin=None):
         super(Machine, self).__init__(stages, bufsize)
         self._consumer_thread = None
 
@@ -88,3 +91,16 @@ class Machine(BaseMachine):
         if self._consumer_thread is None:
             return False
         return self._consumer_thread.is_alive()
+
+
+class MachineFactory(object):
+    """Returns a Machine instance with methods wrapped by given hooks"""
+    baseclass = _Machine
+    def __call__(self, *args, DisplayHooks=BaseDisplayHooks, EventHooks=None, **kwargs):
+        machine = self.baseclass(*args, **kwargs)
+        if DisplayHooks is not None:
+            for m in [x[4:] for x, y in DisplayHooks.__dict__.items() if type(y) == FunctionType and x[:4]=="_on_"]:
+                decorator = DisplayHooks.__getattribute__(m)
+                if hasattr(machine, m) and callable(machine.__getattribute__(m)):
+                    machine.__setattr__(m, decorator(machine.__getattribute__(m)))
+        return machine
