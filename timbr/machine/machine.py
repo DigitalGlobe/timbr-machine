@@ -69,20 +69,22 @@ class Machine(BaseMachine):
     def __init__(self, stages=8, bufsize=1024):
         super(Machine, self).__init__(stages, bufsize)
         self._consumer_thread = None
-        self._running = False
 
     def start(self):
-        if not self._running:
+        if not self.running:
             self._consumer_thread = MachineConsumer(self)
             self._consumer_thread.start()
-            self._running = True
 
     def stop(self):
         self._consumer_thread.stop()
         time.sleep(0.2) # give the thread a chance to stop
-        self._running = False
 
     def set_source(self, source_generator):
         self._source = SourceConsumer(self, source_generator)
         self._source.start()
-        return self._source
+    
+    @property
+    def running(self):
+        if self._consumer_thread is None:
+            return False
+        return self._consumer_thread.is_alive()
