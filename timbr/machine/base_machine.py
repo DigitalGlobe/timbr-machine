@@ -39,8 +39,8 @@ class MachineTransform(object):
         self.ref = "f{}".format(pos)
 
     def on_exception(self, e):
-        self.machine._status['Errored'].append({self.ref: {"oid": self.machine._status["CurrentOID"], "err": e.__repr__(), 
-            "errtime": time_from_objectidstr(self.machine._status["CurrentOID"])}})
+        self.machine._status['Errored'].append({self.ref: {"oid": self.machine._status["LastOID"], "err": e.__repr__(), 
+            "errtime": time_from_objectidstr(self.machine._status["LastOID"])}})
 
     def on_success(self):
         pass
@@ -53,6 +53,7 @@ class MachineTransform(object):
             self.on_exception(e)
 
     def __repr__(self):
+        pass
 
 
 def time_from_objectidstr(oid):
@@ -63,7 +64,7 @@ class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
         self.q = Queue(bufsize)
         self.tbl = {}
-        self._status = {"CurrentOID": None, "LastOID": None, "Processed": 0, "Errored": [], "QueueSize": self.q.qsize()}
+        self._status = {"LastOID": None, "Processed": 0, "Errored": [], "QueueSize": self.q.qsize()}
         self.stages = stages
         self._dsk = None
         self._dirty = True
@@ -90,7 +91,7 @@ class BaseMachine(object):
 
     @property
     def status(self):
-        self._status["CurrentTime"] = time_from_objectidstr(self._status["CurrentOID"])
+        self._status["LastProcessedTime"] = time_from_objectidstr(self._status["LastOID"])
         return self._status
 
     def __len__(self):
@@ -146,8 +147,8 @@ class BaseMachine(object):
 
     def display_status(self, detailed=False, inspect=None):   
         stats = self.status
-        s0 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Ingest Time -- {}</b></div>".format(stats['CurrentTime'])
-        s1 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Ingest ID -- {}</b></div>".format(stats['CurrentOID'])
+        s0 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Last Consumption Time -- {}</b></div>".format(stats['LastProcessedTime'])
+        s1 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Last Ingest ID -- {}</b></div>".format(stats['LastOID'])
         s2 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Total Datum Processed -- {}</b></div>".format(stats['Processed'])
         s3 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Queue Depth -- {}</b></div>".format(stats["QueueSize"])
         display(HTML("\n".join([s0, s1, s2, s3])))
