@@ -148,4 +148,4 @@ class BaseMachine(object):
         s0 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Last Consumption Time -- {}</b></div>".format(stats['last_processed_time'])
         s1 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Total Datum processed -- {}</b></div>".format(stats['processed'])
         s2 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Queue Depth -- {}</b></div>".format(stats["queue_size"])
-        display(HTML("\n".join([s0, s1, s2, s3])))
+        display(HTML("\n".join([s0, s1, s2])))
