@@ -24,6 +24,7 @@ import json
 
 from .util import identity, wrap_transform, json_serializable_exception
 from IPython.display import HTML, display
+import copy
 
 
 def json_serialize(obj):
@@ -39,10 +40,7 @@ class MachineTransform(object):
         self.ref = "f{}".format(pos)
 
     def on_exception(self, e):
-        self.machine._status['errored'].append({self.ref: {"oid": self.machine._status["last_oid"], "err": e.__repr__(), 
-            "errtime": time_from_objectidstr(self.machine._status["last_oid"])}})
-
-    def on_success(self):
+        self.machine._status['errored'] += 1
         pass
 
     def __call__(self, *args, **kwargs):
@@ -64,7 +62,7 @@ class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
         self.q = Queue(bufsize)
         self.tbl = {}
-        self._status = {"last_oid": None, "processed": 0, "errored": [], "queue_size": self.q.qsize()}
+        self._status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.q.qsize()}
         self.stages = stages
         self._dsk = None
         self._dirty = True
@@ -146,7 +144,7 @@ class BaseMachine(object):
         return self._dsk
 
     def display_status(self):   
-        stats = self.status
+        stats = copy.deepcopy(self.status)
         s0 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Last Consumption Time -- {}</b></div>".format(stats['last_processed_time'])
         s1 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Total Datum processed -- {}</b></div>".format(stats['processed'])
         s2 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Queue Depth -- {}</b></div>".format(stats["queue_size"])
