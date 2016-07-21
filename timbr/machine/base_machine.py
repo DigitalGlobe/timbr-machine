@@ -39,8 +39,8 @@ class MachineTransform(object):
         self.ref = "f{}".format(pos)
 
     def on_exception(self, e):
-        self.machine._status['Errored'].append({self.ref: {"oid": self.machine._status["LastOID"], "err": e.__repr__(), 
-            "errtime": time_from_objectidstr(self.machine._status["LastOID"])}})
+        self.machine._status['errored'].append({self.ref: {"oid": self.machine._status["last_oid"], "err": e.__repr__(), 
+            "errtime": time_from_objectidstr(self.machine._status["last_oid"])}})
 
     def on_success(self):
         pass
@@ -64,7 +64,7 @@ class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
         self.q = Queue(bufsize)
         self.tbl = {}
-        self._status = {"LastOID": None, "Processed": 0, "Errored": [], "QueueSize": self.q.qsize()}
+        self._status = {"last_oid": None, "processed": 0, "errored": [], "queue_size": self.q.qsize()}
         self.stages = stages
         self._dsk = None
         self._dirty = True
@@ -91,7 +91,7 @@ class BaseMachine(object):
 
     @property
     def status(self):
-        self._status["LastProcessedTime"] = time_from_objectidstr(self._status["LastOID"])
+        self._status["last_processed_time"] = time_from_objectidstr(self._status["last_oid"])
         return self._status
 
     def __len__(self):
@@ -145,10 +145,10 @@ class BaseMachine(object):
             self.dirty = False
         return self._dsk
 
-    def display_status(self, detailed=False, inspect=None):   
+    def display_status(self):   
         stats = self.status
-        s0 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Last Consumption Time -- {}</b></div>".format(stats['LastProcessedTime'])
-        s1 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Last Ingest ID -- {}</b></div>".format(stats['LastOID'])
-        s2 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Total Datum Processed -- {}</b></div>".format(stats['Processed'])
-        s3 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Queue Depth -- {}</b></div>".format(stats["QueueSize"])
+        s0 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Last Consumption Time -- {}</b></div>".format(stats['last_processed_time'])
+        s1 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Last Ingest ID -- {}</b></div>".format(stats['last_oid'])
+        s2 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Total Datum processed -- {}</b></div>".format(stats['processed'])
+        s3 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Queue Depth -- {}</b></div>".format(stats["queue_size"])
         display(HTML("\n".join([s0, s1, s2, s3])))
