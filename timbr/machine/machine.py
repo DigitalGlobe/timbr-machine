@@ -16,6 +16,7 @@ from .util import StoppableThread, mkdir_p
 import functools
 from types import FunctionType
 from bson.objectid import ObjectId
+from collections import deque
 
 
 class MachineConsumer(StoppableThread):
@@ -42,9 +43,11 @@ class MachineConsumer(StoppableThread):
                 output = self.machine.get(block=True, timeout=0.1)
                 hdr = output[0]
                 msg = "[{}]".format(",".join(output[1:]))
-                self._socket.send_multipart([hdr, msg.encode("utf-8")])
+                payload = [hdr, msg.encode("utf-8")]
+                self._socket.send_multipart(payload)
                 self.machine._status['last_oid'] = hdr
                 self.machine._status['processed'] = self.machine._status['processed'] + 1
+                self.machine._data_prev.append(payload)
             except Full:
                 break
             except Empty:
@@ -52,8 +55,10 @@ class MachineConsumer(StoppableThread):
             except Exception as e:
                 hdr = str(ObjectId())
                 msg = e.__repr__()
-                self._socket.send_multipart([hdr, msg.encode("utf-8")])
+                payload = [hdr, msg.encode("utf-8")]
+                self._socket.send_multipart(payload)
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
+                self.machine._error_prev.append(payload)
 
 class SourceConsumer(StoppableThread):
     def __init__(self, machine, generator):
@@ -75,6 +80,8 @@ class Machine(BaseMachine):
     def __init__(self, stages=8, bufsize=1024):
         super(Machine, self).__init__(stages, bufsize)
         self._consumer_thread = None
+        self._data_prev = deque(maxlen=10)
+        self._error_prev = deque(maxlen=10)
 
     def start(self):
         if not self.running:

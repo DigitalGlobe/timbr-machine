@@ -65,9 +65,7 @@ class BaseMachine(object):
         dsk["in"] = (self.q.get, block, timeout)
         with Profiler() as prof:
             output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)], rerun_exceptions_locally=True)
-        self.result.append(prof.results)
         return output
-
 
     @property
     def status(self):
