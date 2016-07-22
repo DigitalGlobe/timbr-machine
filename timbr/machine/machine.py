@@ -15,6 +15,7 @@ from .base_machine import BaseMachine
 from .util import StoppableThread, mkdir_p
 import functools
 from types import FunctionType
+from bson.objectid import ObjectId
 
 
 class MachineConsumer(StoppableThread):
@@ -41,13 +42,18 @@ class MachineConsumer(StoppableThread):
                 output = self.machine.get(block=True, timeout=0.1)
                 hdr = output[0]
                 msg = "[{}]".format(",".join(output[1:]))
-                # print(output)
                 self._socket.send_multipart([hdr, msg.encode("utf-8")])
                 self.machine._status['last_oid'] = hdr
                 self.machine._status['processed'] = self.machine._status['processed'] + 1
+            except Full:
+                break
             except Empty:
-                pass
-
+                continue
+            except Exception as e:
+                hdr = str(ObjectId())
+                msg = e.__repr__()
+                self._socket.send_multipart([hdr, msg.encode("utf-8")])
+                self.machine._status['errored'] = self.machine._status['errored'] + 1
 
 class SourceConsumer(StoppableThread):
     def __init__(self, machine, generator):
@@ -64,7 +70,6 @@ class SourceConsumer(StoppableThread):
                 self.machine.put(msg)
             except (StopIteration, Full):
                 break
-
 
 class Machine(BaseMachine):
     def __init__(self, stages=8, bufsize=1024):

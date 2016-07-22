@@ -1,6 +1,7 @@
-from IPython import get_ipython
+from __future__ import print_function
 
 from multiprocessing.pool import ThreadPool
+from dask.diagnostics import Profiler
 import dask as da
 # NOTE: sync mode wil likely be faster
 from dask.async import get_sync as get
@@ -16,7 +17,7 @@ except ImportError:
 
 from bson.objectid import ObjectId
 from functools import wraps # should be used but isn't currently
-from collections import defaultdict
+from collections import defaultdict, deque
 import inspect
 
 import zmq
@@ -33,30 +34,8 @@ def json_serialize(obj):
     except TypeError as te:
         return json.dumps(json_serializable_exception(te))
 
-class MachineTransform(object):
-    def __init__(self, machine, fn, pos):
-        self.machine = machine
-        self.fn = wrap_transform(fn)
-        self.ref = "f{}".format(pos)
-
-    def on_exception(self, e):
-        self.machine._status['errored'] += 1
-        pass
-
-    def __call__(self, *args, **kwargs):
-        try:
-            return self.fn(*args, **kwargs)
-            self.on_success()
-        except Exception as e:
-            self.on_exception(e)
-
-    def __repr__(self):
-        pass
-
-
 def time_from_objectidstr(oid):
     return ObjectId(oid).generation_time.isoformat()
-
 
 class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
@@ -84,8 +63,11 @@ class BaseMachine(object):
     def get(self, block=False, timeout=0.5):
         dsk = dict(self.dsk)
         dsk["in"] = (self.q.get, block, timeout)
-        output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)])
+        with Profiler() as prof:
+            output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)], rerun_exceptions_locally=True)
+        self.result.append(prof.results)
         return output
+
 
     @property
     def status(self):
@@ -98,7 +80,7 @@ class BaseMachine(object):
     def __setitem__(self, pos, fn):
         assert isinstance(pos, (int, long))
         assert pos >=0 and pos < self.stages
-        wrapped_fn = MachineTransform(self, fn, pos)
+        wrapped_fn = wrap_transform(fn)
         self.tbl["f{}".format(pos)] = wrapped_fn
         self.dirty = True
 
@@ -108,7 +90,7 @@ class BaseMachine(object):
         return self.tbl["f{}".format(pos)]
 
     def __missing__(self, pos):
-        return MachineTransform(identity)
+        return wrap_transform(identity)
 
     def __delitem__(self, pos):
         assert isinstance(pos, (int, long))
@@ -143,9 +125,16 @@ class BaseMachine(object):
             self.dirty = False
         return self._dsk
 
-    def display_status(self):   
+    def _format_status(self):
         stats = copy.deepcopy(self.status)
-        s0 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Last Consumption Time -- {}</b></div>".format(stats['last_processed_time'])
-        s1 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Total Datum processed -- {}</b></div>".format(stats['processed'])
-        s2 = "<div style='border:1px; border-style:solid; width:400px; height:auto; float:left;'><b>Current Queue Depth -- {}</b></div>".format(stats["queue_size"])
-        display(HTML("\n".join([s0, s1, s2])))
+        hmap = {k: " ".join(k.split("_")).upper() for k in stats.keys()}
+        s = ""
+        for h in sorted(stats.keys()):
+            s += "{:<5} --- {:<5}\n\n".format(hmap[h], stats[h])
+        return s
+
+    def print_status(self):
+        print(self._format_status())
+        
+
+
