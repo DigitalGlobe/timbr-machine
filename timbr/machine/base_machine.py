@@ -1,4 +1,4 @@
-from IPython import get_ipython
+from __future__ import print_function
 
 from multiprocessing.pool import ThreadPool
 import dask as da
@@ -16,6 +16,7 @@ except ImportError:
 
 from bson.objectid import ObjectId
 from functools import wraps # should be used but isn't currently
+from collections import defaultdict
 import inspect
 
 import zmq
@@ -30,17 +31,20 @@ def json_serialize(obj):
     except TypeError as te:
         return json.dumps(json_serializable_exception(te))
 
+def time_from_objectidstr(oid):
+    return ObjectId(oid).generation_time.isoformat()
+
 
 class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
         self.q = Queue(bufsize)
         self.tbl = {}
+        self._status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.q.qsize()}
         self.stages = stages
         self._dsk = None
         self._dirty = True
         self._getter = get
         self._socket = None
-
 
         self.serialize_fn = json_serialize
 
@@ -57,8 +61,13 @@ class BaseMachine(object):
     def get(self, block=False, timeout=0.5):
         dsk = dict(self.dsk)
         dsk["in"] = (self.q.get, block, timeout)
-        output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)])
+        output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)], rerun_exceptions_locally=True)
         return output
+
+    @property
+    def status(self):
+        self._status["last_processed_time"] = time_from_objectidstr(self._status["last_oid"])
+        return self._status
 
     def __len__(self):
         return stages
@@ -110,3 +119,17 @@ class BaseMachine(object):
             self._dsk.update(self.REFERENCE_DASK)
             self.dirty = False
         return self._dsk
+
+    def format_status(self):
+        stats = self.status
+        hmap = {k: " ".join(k.split("_")).upper() for k in stats.keys()}
+        s = ""
+        for h in sorted(stats.keys()):
+            s += "{:<5} --- {:<5}\n\n".format(hmap[h], stats[h])
+        return s
+
+    def print_status(self):
+        print(self.format_status())
+        
+
+
