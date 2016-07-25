@@ -123,8 +123,7 @@ class BaseMachine(object):
             self.dirty = False
         return self._dsk
 
-    def _format_status(self):
-        stats = copy.deepcopy(self.status)
+    def format_status(self):
         hmap = {k: " ".join(k.split("_")).upper() for k in stats.keys()}
         s = ""
         for h in sorted(stats.keys()):
@@ -132,7 +131,7 @@ class BaseMachine(object):
         return s
 
     def print_status(self):
-        print(self._format_status())
+        print(self.format_status())
         
 
 

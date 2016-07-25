@@ -2,6 +2,8 @@ from threading import Thread
 import time
 import json
 
+from .util import json_serializable_exception
+
 try:
     from Queue import Empty, Full, Queue # Python 2
 except ImportError:
@@ -48,13 +50,12 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['last_oid'] = hdr
                 self.machine._status['processed'] = self.machine._status['processed'] + 1
                 self.machine._data_prev.append(payload)
-            except Full:
-                break
             except Empty:
                 continue
             except Exception as e:
                 hdr = str(ObjectId())
-                msg = e.__repr__()
+                errors = [e] + [""] * 8
+                msg = "[{}]".format(",".join([json.dumps(json_serializable_exception(e)) for e in errors]))
                 payload = [hdr, msg.encode("utf-8")]
                 self._socket.send_multipart(payload)
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
