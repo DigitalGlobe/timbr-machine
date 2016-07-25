@@ -24,8 +24,6 @@ import zmq
 import json
 
 from .util import identity, wrap_transform, json_serializable_exception
-from IPython.display import HTML, display
-import copy
 
 
 def json_serialize(obj):
@@ -36,6 +34,7 @@ def json_serialize(obj):
 
 def time_from_objectidstr(oid):
     return ObjectId(oid).generation_time.isoformat()
+
 
 class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
@@ -124,6 +123,7 @@ class BaseMachine(object):
         return self._dsk
 
     def format_status(self):
+        stats = self.status
         hmap = {k: " ".join(k.split("_")).upper() for k in stats.keys()}
         s = ""
         for h in sorted(stats.keys()):

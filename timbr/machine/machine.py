@@ -46,10 +46,10 @@ class MachineConsumer(StoppableThread):
                 hdr = output[0]
                 msg = "[{}]".format(",".join(output[1:]))
                 payload = [hdr, msg.encode("utf-8")]
-                self._socket.send_multipart(payload)
                 self.machine._status['last_oid'] = hdr
                 self.machine._status['processed'] = self.machine._status['processed'] + 1
                 self.machine._data_prev.append(payload)
+                self._socket.send_multipart(payload)
             except Empty:
                 continue
             except Exception as e:
@@ -57,9 +57,10 @@ class MachineConsumer(StoppableThread):
                 errors = [e] + [""] * 8
                 msg = "[{}]".format(",".join([json.dumps(json_serializable_exception(e)) for e in errors]))
                 payload = [hdr, msg.encode("utf-8")]
-                self._socket.send_multipart(payload)
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
                 self.machine._error_prev.append(payload)
+                self._socket.send_multipart(payload)
+
 
 class SourceConsumer(StoppableThread):
     def __init__(self, machine, generator):
