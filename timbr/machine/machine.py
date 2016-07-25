@@ -15,8 +15,6 @@ import zmq
 
 from .base_machine import BaseMachine
 from .util import StoppableThread, mkdir_p
-import functools
-from types import FunctionType
 from bson.objectid import ObjectId
 from collections import deque
 

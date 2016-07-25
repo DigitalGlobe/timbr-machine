@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 from multiprocessing.pool import ThreadPool
-from dask.diagnostics import Profiler
 import dask as da
 # NOTE: sync mode wil likely be faster
 from dask.async import get_sync as get
@@ -17,7 +16,7 @@ except ImportError:
 
 from bson.objectid import ObjectId
 from functools import wraps # should be used but isn't currently
-from collections import defaultdict, deque
+from collections import defaultdict
 import inspect
 
 import zmq
@@ -62,8 +61,7 @@ class BaseMachine(object):
     def get(self, block=False, timeout=0.5):
         dsk = dict(self.dsk)
         dsk["in"] = (self.q.get, block, timeout)
-        with Profiler() as prof:
-            output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)], rerun_exceptions_locally=True)
+        output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)], rerun_exceptions_locally=True)
         return output
 
     @property
