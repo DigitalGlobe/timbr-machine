@@ -10,6 +10,14 @@ class DisplayStatus extends React.Component {
     };
   }
 
+  toggle() {
+    this.props.comm.send({ 
+      method: 'toggle', 
+      data: { 
+        action: this.state.status.running ? 'stop' : 'start' } 
+      }, this.props.cell.get_callbacks() );
+  }
+
   componentWillMount(){
     dispatcher.register( payload => {
       if ( payload.actionType === 'display_update' ) {
@@ -20,10 +28,15 @@ class DisplayStatus extends React.Component {
 
   render() {
     const { status } = this.state;
-    console.log(status)
+
+    const action = status.running ? 'Stop' : 'Start';
+
     return ( 
       <div id="timbr_machine_status">
-        <h2>Timbr Machine Status</h2>
+        <div className="timbr-header">
+          <span className="timbr-title">Timbr Machine Status</span>
+          <button onClick={ () => this.toggle.apply(this) }>{ action }</button>
+        </div>
         { Object.keys( status ).map( ( field, i ) => (
             <div key={ i }>
               <span className='field-name'>{field}:</span>

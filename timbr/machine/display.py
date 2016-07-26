@@ -33,6 +33,7 @@ class Display(Component):
 
     def __init__(self, machine, interval=1, **kwargs):
         super(Display, self).__init__(target_name='timbr.machine')
+        self.on_msg(self._handle_msg)
         self.machine = machine
         self.interval = interval
         self.send({"method": "display"})
@@ -51,7 +52,15 @@ class Display(Component):
     def stop(self):
         self._poller.stop()
         self._polling = False
+        self._update()
 
     def _update(self):
         self._status = self.machine.status
+        self._status['running'] = self.machine.running
         self.send({'method': 'update', 'props': { 'status': self._status }})
+
+    def _handle_msg(self, msg):
+        data = msg['content']['data']
+        if data.get('method', '') == 'toggle' and data['data']['action'] in ['start', 'stop']:
+            method = getattr(self.machine, data['data']['action'])
+            method()
