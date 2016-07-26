@@ -23,6 +23,7 @@ import zmq
 import json
 
 from .util import identity, wrap_transform, json_serializable_exception
+from .display import Display
 
 
 def json_serialize(obj):
@@ -64,13 +65,16 @@ class BaseMachine(object):
         output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)], rerun_exceptions_locally=True)
         return output
 
+    def display_status(self):
+        self._display = Display(self)
+
     @property
     def status(self):
         self._status["last_processed_time"] = time_from_objectidstr(self._status["last_oid"])
         return self._status
 
     def __len__(self):
-        return stages
+        return self.stages
 
     def __setitem__(self, pos, fn):
         assert isinstance(pos, (int, long))

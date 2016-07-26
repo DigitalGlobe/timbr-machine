@@ -17,6 +17,7 @@ from .base_machine import BaseMachine
 from .util import StoppableThread, mkdir_p
 from bson.objectid import ObjectId
 from collections import deque
+from observed import event
 
 
 class MachineConsumer(StoppableThread):
@@ -83,11 +84,13 @@ class Machine(BaseMachine):
         self._data_prev = deque(maxlen=10)
         self._error_prev = deque(maxlen=10)
 
+    @event
     def start(self):
         if not self.running:
             self._consumer_thread = MachineConsumer(self)
             self._consumer_thread.start()
 
+    @event
     def stop(self):
         self._consumer_thread.stop()
         time.sleep(0.2) # give the thread a chance to stop
