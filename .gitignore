@@ -1,0 +1,3 @@
+js/node_modules
+**/*.pyc
+timbr_machine.egg-info
