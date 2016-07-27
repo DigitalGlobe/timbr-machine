@@ -1,3 +1,10 @@
+
+from dask.callbacks import Callback
+
+from collections import namedtuple
+from itertools import starmap
+from timeit import default_timer
+
 import threading
 import inspect
 
@@ -24,7 +31,8 @@ def identity(x):
 
 def wrap_transform(fn):
     """
-    This function returns a new function that accepts an arbitrary number of arguments
+    This function returns a new function that accepts 
+    an arbitrary number of arguments
     and calls the wrapped function with the number of arguments that it supports. For
     example:
 
@@ -65,3 +73,68 @@ def mkdir_p(path):
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else: raise
+
+class OrderedDefaultDict(OrderedDict):
+    def __init__(self, default_factory, *args, **kwargs):
+        super(OrderedDefaultDict, self).__init__(*args, **kwargs)
+        assert callable(default_factory)
+        self.default_factory = default_factory
+        
+    def __getitem__(self, key):
+        try:
+            return super(OrderedDefaultDict, self).__getitem__(key)
+        except KeyError:
+            return self.__missing__(key)
+
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        self[key] = value = self.default_factory()
+        return value
+
+
+
+TaskData = namedtuple('TaskData', ('key', 'task', 'start_time',
+                                   'end_time', 'worker_id'))
+
+
+class MachineProfiler(Callback):
+    """A profiler for dask execution at the task level.
+
+    If you use the profiler globally you will need to clear out old results
+    manually.
+    >>> prof.clear()
+    """
+    def __init__(self):
+        self._dsk = {}
+        self._successful = []
+        self._current = None
+        self._errored = None
+        self._cache = None
+
+    def __enter__(self):
+        self.clear()
+        return super(MachineProfiler, self).__enter__()
+
+    def _start(self, dsk):
+        self._dsk.update(dsk)
+
+    def _pretask(self, key, dsk, state):
+        # state is a dict
+        self._current = key
+
+    def _posttask(self, key, value, dsk, state, id):
+        self._successful.append(key)
+
+    def _finish(self, dsk, state, failed):
+        if failed:
+            self._errored = self._current
+            self._cache = state["cache"].copy()
+            
+    def clear(self):
+        """Clear out old results from profiler"""
+        del self._successful[:]
+        self._current = None
+        self._errored = None
+        self._cache = None
+        self._dsk = {}
