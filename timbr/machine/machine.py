@@ -17,6 +17,8 @@ from .base_machine import BaseMachine
 from .util import StoppableThread, mkdir_p
 from bson.objectid import ObjectId
 from collections import deque
+import sys
+import traceback
 
 
 class MachineConsumer(StoppableThread):
@@ -51,12 +53,14 @@ class MachineConsumer(StoppableThread):
             except Empty:
                 continue
             except Exception as e:
+                exc_type, exc_value, exc_tb = sys.exc_info()
+                fe = traceback.format_exception(exc_type, exc_value, exc_tb)
                 hdr = str(ObjectId())
                 errors = [e] + [""] * 8
                 msg = "[{}]".format(",".join([json.dumps(json_serializable_exception(e)) for e in errors]))
                 payload = [hdr, msg.encode("utf-8")]
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
-                self.machine._error_prev.append(payload)
+                self.machine._error_prev.append(fe)
                 self._socket.send_multipart(payload)
 
 

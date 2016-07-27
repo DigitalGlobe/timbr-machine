@@ -16,7 +16,7 @@ except ImportError:
 
 from bson.objectid import ObjectId
 from functools import wraps # should be used but isn't currently
-from collections import defaultdict
+from collections import defaultdict, deque
 import inspect
 
 import zmq
@@ -41,6 +41,7 @@ class BaseMachine(object):
         self.tbl = {}
         self._status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.q.qsize()}
         self.stages = stages
+        self.input = None
         self._dsk = None
         self._dirty = True
         self._getter = get
