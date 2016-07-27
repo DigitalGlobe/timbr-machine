@@ -65,8 +65,8 @@ class BaseMachine(object):
         output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)], rerun_exceptions_locally=True)
         return output
 
-    def display_status(self):
-        self._display = Display(self)
+    def display_status(self, interval=1):
+        self._display = Display(self, interval=interval)
 
     @property
     def status(self):
