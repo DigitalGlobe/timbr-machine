@@ -57,12 +57,18 @@ def wrap_transform(fn):
     return wrapped
 
 
-def json_serializable_exception(e, extra_data={}):
-    #extra_data["_traceback"] = tb.format_tb(e)
-    #extra_data["_exception"] = tb.format_exception_only(e)
-    extra_data["_exception"] = str(e)
-    #extra_data["_exception_dict"] = e.__dict__
-    return(extra_data)
+def json_serializable_exception(e, **kwargs):
+    emsg = {"_exception": {}}
+    exc  = {"exc_value": e.__repr__()}
+    try:
+        exc["exc_class"] = str(e.__class__)
+        exc["exc_type"] = str(e.exception.__class__)
+        exc["exc_tb"] = e.traceback
+    except AttributeError, ae:
+        pass
+    emsg["_exception"].update(exc)
+    emsg["_exception"].update(kwargs)
+    return emsg
 
 import os, errno
 
@@ -115,7 +121,7 @@ class MachineProfiler(Callback):
         self._errored = None
         self._cache = None
         self._dsk = {}
-        
+
 
 class OrderedDefaultDict(OrderedDict):
     def __init__(self, default_factory, *args, **kwargs):
