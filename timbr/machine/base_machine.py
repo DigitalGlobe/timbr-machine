@@ -62,9 +62,6 @@ class UpstreamException(MachineError):
     def __init__(self, fn):
         self.args = ["Task <{}> never ran due to upstream dask task error".format(fn)]
         
-def upstream_exception(fn):
-    return UpstreamException(fn)
-
 
 class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
