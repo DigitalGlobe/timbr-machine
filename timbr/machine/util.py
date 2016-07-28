@@ -1,7 +1,7 @@
 
 from dask.callbacks import Callback
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from itertools import starmap
 from timeit import default_timer
 
@@ -74,29 +74,6 @@ def mkdir_p(path):
             pass
         else: raise
 
-class OrderedDefaultDict(OrderedDict):
-    def __init__(self, default_factory, *args, **kwargs):
-        super(OrderedDefaultDict, self).__init__(*args, **kwargs)
-        assert callable(default_factory)
-        self.default_factory = default_factory
-        
-    def __getitem__(self, key):
-        try:
-            return super(OrderedDefaultDict, self).__getitem__(key)
-        except KeyError:
-            return self.__missing__(key)
-
-    def __missing__(self, key):
-        if self.default_factory is None:
-            raise KeyError(key)
-        self[key] = value = self.default_factory()
-        return value
-
-
-
-TaskData = namedtuple('TaskData', ('key', 'task', 'start_time',
-                                   'end_time', 'worker_id'))
-
 
 class MachineProfiler(Callback):
     """A profiler for dask execution at the task level.
@@ -138,3 +115,23 @@ class MachineProfiler(Callback):
         self._errored = None
         self._cache = None
         self._dsk = {}
+        
+
+class OrderedDefaultDict(OrderedDict):
+    def __init__(self, default_factory, *args, **kwargs):
+        super(OrderedDefaultDict, self).__init__(*args, **kwargs)
+        assert callable(default_factory)
+        self.default_factory = default_factory
+        
+    def __getitem__(self, key):
+        try:
+            return super(OrderedDefaultDict, self).__getitem__(key)
+        except KeyError:
+            return self.__missing__(key)
+
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        self[key] = value = self.default_factory()
+        return value
+
