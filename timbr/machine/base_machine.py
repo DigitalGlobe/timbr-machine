@@ -25,6 +25,7 @@ import json
 from itertools import ifilter
 
 from .util import identity, wrap_transform, json_serializable_exception, MachineProfiler
+from .exception import UpstreamError
 
 
 
@@ -34,18 +35,7 @@ def json_serialize(obj):
     except TypeError as te:
         return json.dumps(json_serializable_exception(te))
 
-def serialize_exception(e, **kwargs):
-    emsg = {"error_": {}}
-    exc  = {"exc_value": e.__repr__()}
-    try:
-        exc["exc_class"] = str(e.__class__)
-        exc["exc_type"] = str(e.exception.__class__)
-        exc["exc_tb"] = e.traceback
-    except AttributeError, ae:
-        pass
-    emsg["error_"].update(exc)
-    emsg["error_"].update(kwargs)
-    return json_serialize(emsg)
+
 
 def time_from_objectidstr(oid):
     return ObjectId(oid).generation_time.isoformat()
@@ -55,13 +45,6 @@ def is_serialization_task(task):
         return True
     return False
 
-class MachineError(Exception):
-    pass
-
-class UpstreamException(MachineError):
-    def __init__(self, fn):
-        self.args = ["Task <{}> never ran due to upstream dask task error".format(fn)]
-        
 
 class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
@@ -162,7 +145,7 @@ class BaseMachine(object):
     def print_status(self):
         print(self.format_status())
 
-    def _build_output_on_error(self, e, e_serializer=serialize_exception):
+    def _build_output_on_error(self, e, formatter=json_serializable_exception):
         errored_task = self._profiler._errored
         tasks = [[t, t + "_s"] for t in ["oid", "in"] + ["f{}".format(i) for i in xrange(self.stages)]]
         output = []
@@ -171,7 +154,7 @@ class BaseMachine(object):
                 output.append(self._profiler._cache[fn_s])
             except KeyError as ke:
                 if errored_task in (fn, fn_s):
-                    output.append(e_serializer(e, task=errored_task))
+                    output.append(json_serialize(formatter(e, task=errored_task)))
                 else:
-                    output.append(e_serializer(upstream_exception(fn_s)))
+                    output.append(json_serialize(formatter(UpstreamError(fn_s))))
         return output      
