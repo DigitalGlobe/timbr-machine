@@ -15,7 +15,7 @@ except ImportError:
     from queue import Empty, Full, Queue # Python 3
 
 from bson.objectid import ObjectId
-from functools import wraps # should be used but isn't currently
+from functools import wraps, partial # should be used but isn't currently
 from collections import defaultdict, deque
 import inspect
 
@@ -75,7 +75,7 @@ class BaseMachine(object):
         self.input = None
         self._dsk = None
         self._dirty = True
-        self._getter = get
+        self._getter = partial(get, num_workers=1)
         self._socket = None
         self._profiler = MachineProfiler()
         self._profiler.register()
