@@ -21,9 +21,6 @@ from bson.objectid import ObjectId
 from collections import deque
 
 
-
-
-
 class MachineConsumer(StoppableThread):
     def __init__(self, machine):
         super(MachineConsumer, self).__init__()
@@ -63,8 +60,6 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
                 self.machine._error_prev.append(payload)
                 self._socket.send_multipart(payload)
-                print("Caught error, breaking")
-                break
 
 
 class SourceConsumer(StoppableThread):
