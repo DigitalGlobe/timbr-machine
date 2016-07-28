@@ -29,7 +29,7 @@ class Display(Component):
       A UI component for displaying status info in notebooks via react components
     """
     module = 'Display'
-    _status = Dict()
+    #_status = Dict()
 
     def __init__(self, machine, interval=1, **kwargs):
         super(Display, self).__init__(target_name='timbr.machine')

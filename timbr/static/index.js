@@ -71,7 +71,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	function load_ipython_extension() {
-	  requirejs(["base/js/namespace", "base/js/events"], function (Jupyter, events, React, ReactDom) {
+	  requirejs(["base/js/namespace", "base/js/events"], function (Jupyter, events) {
 	    __webpack_require__(43);
 	    // initialize jupyter react cells, comm mananger and components
 	    _jupyterReactJs2.default.init(Jupyter, events, 'timbr.machine', { components: _components2.default, on_update: on_update });
@@ -112,10 +112,10 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	         * creates an instance of a "Manager" used to listen for new comms and create new components
 	         */
 	        var handle_kernel = function(Jupyter, kernel) {
-	          if ( kernel.comm_manager && !kernel.component_manager ) {
+	          //if ( kernel.comm_manager && !kernel.component_manager ) {
 	            var Component = ReactComponent( component_options );
 	            kernel.component_manager = new Manager( comm_target, kernel, Component );
-	          }
+	          //}
 	        };
 
 	        /**
@@ -123,8 +123,12 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	         */
 	        // TODO need to handle clear out output calls
 	        var handle_cell = function(cell) {
-	            if (cell.cell_type==='code') {
-	                cell.react_dom = new Area( cell );
+	            if ( cell.cell_type === 'code' ) {
+	                if ( !cell.react_dom ) {
+	                    cell.react_dom = new Area( cell );
+	                } else if ( cell.react_dom.clear !== undefined ) {
+	                    cell.react_dom.clear();
+	                }
 	            }
 	        };
 
@@ -149,8 +153,8 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	        });
 
 	        events.on( 'delete.Cell', function( event, data ) {
-	            if ( data.cell && data.cell.widgetarea ) {
-	                data.cell.react_dom.remove();
+	            if ( data.cell && data.cell.react_dom ) {
+	                data.cell.react_dom.clear();
 	            }
 	        });
 	    });
@@ -196,6 +200,12 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	        throw new Error('Cell does not have an `input` element.  Is it not a CodeCell?');
 	    }
 	};
+
+	Area.prototype.clear = function(){ 
+	    this.subarea.innerHTML = '';
+	};
+
+
 
 	module.exports = Area;
 
@@ -264,7 +274,14 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	      } else {
 	        display = _outputAreaElement(msg);
 	      }
+	      
+	      var cell = _getMsgCell( msg );
 	      ReactDom.render(element, display);
+	    };
+
+	    var _getMsgCell = function( msg ) {
+	      var msg_id = msg.parent_header.msg_id;
+	      return Jupyter.notebook.get_msg_cell( msg_id );
 	    };
 
 	    // Create React Elements from components and props 
@@ -274,8 +291,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 	    // Get the DOM Element to render to
 	    var _outputAreaElement = function (msg) {
-	      var msg_id = msg.parent_header.msg_id;
-	      var cell = Jupyter.notebook.get_msg_cell(msg_id);
+	      var cell = _getMsgCell( msg );
 	      return cell.react_dom.subarea;
 	    };
 

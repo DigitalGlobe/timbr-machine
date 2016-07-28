@@ -16,7 +16,7 @@ function load_ipython_extension () {
   requirejs([
       "base/js/namespace",
       "base/js/events",
-  ], function( Jupyter, events, React, ReactDom ) {
+  ], function( Jupyter, events ) {
       require('./css/timbr_machine.css');
       // initialize jupyter react cells, comm mananger and components
       JupyterReact.init( Jupyter, events, 'timbr.machine', { components, on_update } );
