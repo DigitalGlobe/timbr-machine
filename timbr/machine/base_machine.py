@@ -22,9 +22,8 @@ import inspect
 import zmq
 import json
 
-from itertools import ifilter
-
-from .util import identity, wrap_transform, json_serializable_exception, MachineProfiler
+from .util import identity, wrap_transform, json_serializable_exception
+from .profiler import MachineProfiler
 from .exception import UpstreamError
 
 
@@ -34,8 +33,6 @@ def json_serialize(obj):
         return json.dumps(obj)
     except TypeError as te:
         return json.dumps(json_serializable_exception(te))
-
-
 
 def time_from_objectidstr(oid):
     return ObjectId(oid).generation_time.isoformat()
