@@ -1,8 +1,10 @@
+from __future__ import print_function
+
 from threading import Thread
 import time
 import json
 
-from .util import json_serializable_exception
+from .util import json_serializable_exception, MachineProfiler
 
 try:
     from Queue import Empty, Full, Queue # Python 2
@@ -17,8 +19,9 @@ from .base_machine import BaseMachine
 from .util import StoppableThread, mkdir_p
 from bson.objectid import ObjectId
 from collections import deque
-import sys
-import traceback
+
+
+
 
 
 class MachineConsumer(StoppableThread):
@@ -52,16 +55,16 @@ class MachineConsumer(StoppableThread):
                 self._socket.send_multipart(payload)
             except Empty:
                 continue
-            except Exception as e:
-                exc_type, exc_value, exc_tb = sys.exc_info()
-                fe = traceback.format_exception(exc_type, exc_value, exc_tb)
-                hdr = str(ObjectId())
-                errors = [e] + [""] * 8
-                msg = "[{}]".format(",".join([json.dumps(json_serializable_exception(e)) for e in errors]))
+            except Exception as e: # e derives from dask's RemoteException
+                output = self.machine._build_output_on_error(e)
+                hdr = output[0]
+                msg = "[{}]".format(",".join(output[1:]))
                 payload = [hdr, msg.encode("utf-8")]
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
-                self.machine._error_prev.append(fe)
+                self.machine._error_prev.append(payload)
                 self._socket.send_multipart(payload)
+                print("Caught error, breaking")
+                break
 
 
 class SourceConsumer(StoppableThread):
@@ -94,6 +97,7 @@ class Machine(BaseMachine):
 
     def stop(self):
         self._consumer_thread.stop()
+        self._profiler.unregister()
         time.sleep(0.2) # give the thread a chance to stop
 
     def set_source(self, source_generator):
