@@ -3,8 +3,8 @@ from __future__ import print_function
 from multiprocessing.pool import ThreadPool
 import dask as da
 # NOTE: sync mode wil likely be faster
-from dask.async import get_sync as get
-# from dask.threaded import get
+# from dask.async import get_sync as get
+from dask.threaded import get
 
 _pool = ThreadPool()
 da.set_options(pool=_pool)
@@ -15,14 +15,17 @@ except ImportError:
     from queue import Empty, Full, Queue # Python 3
 
 from bson.objectid import ObjectId
-from functools import wraps # should be used but isn't currently
-from collections import defaultdict
+from functools import wraps, partial # should be used but isn't currently
+from collections import defaultdict, deque
 import inspect
 
 import zmq
 import json
 
 from .util import identity, wrap_transform, json_serializable_exception
+from .profiler import MachineProfiler
+from .exception import UpstreamError
+
 
 
 def json_serialize(obj):
@@ -34,6 +37,11 @@ def json_serialize(obj):
 def time_from_objectidstr(oid):
     return ObjectId(oid).generation_time.isoformat()
 
+def is_serialization_task(task):
+    if task[-2:] == "_s":
+        return True
+    return False
+
 
 class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
@@ -41,10 +49,13 @@ class BaseMachine(object):
         self.tbl = {}
         self._status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.q.qsize()}
         self.stages = stages
+        self.input = None
         self._dsk = None
         self._dirty = True
-        self._getter = get
+        self._getter = partial(get, num_workers=1)
         self._socket = None
+        self._profiler = MachineProfiler()
+        self._profiler.register()
 
         self.serialize_fn = json_serialize
 
@@ -61,7 +72,7 @@ class BaseMachine(object):
     def get(self, block=False, timeout=0.5):
         dsk = dict(self.dsk)
         dsk["in"] = (self.q.get, block, timeout)
-        output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)], rerun_exceptions_locally=True)
+        output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)])
         return output
 
     @property
@@ -130,6 +141,17 @@ class BaseMachine(object):
 
     def print_status(self):
         print(self.format_status())
-        
 
-
+    def _build_output_on_error(self, e, formatter=json_serializable_exception):
+        errored_task = self._profiler._errored
+        tasks = [[t, t + "_s"] for t in ["oid", "in"] + ["f{}".format(i) for i in xrange(self.stages)]]
+        output = []
+        for fn, fn_s in tasks:
+            try:
+                output.append(self._profiler._cache[fn_s])
+            except KeyError as ke:
+                if errored_task in (fn, fn_s):
+                    output.append(json_serialize(formatter(e, task=errored_task)))
+                else:
+                    output.append(json_serialize(formatter(UpstreamError(fn_s))))
+        return output      

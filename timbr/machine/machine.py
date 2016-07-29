@@ -1,8 +1,7 @@
+import dask.async
 from threading import Thread
 import time
 import json
-
-from .util import json_serializable_exception
 
 try:
     from Queue import Empty, Full, Queue # Python 2
@@ -48,16 +47,17 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['processed'] = self.machine._status['processed'] + 1
                 self.machine._data_prev.append(payload)
                 self._socket.send_multipart(payload)
-            except Empty:
-                continue
-            except Exception as e:
-                hdr = str(ObjectId())
-                errors = [e] + [""] * 8
-                msg = "[{}]".format(",".join([json.dumps(json_serializable_exception(e)) for e in errors]))
+            except dask.async.RemoteException as re: 
+                # re derives from dask's RemoteException
+                output = self.machine._build_output_on_error(re)
+                hdr = output[0]
+                msg = "[{}]".format(",".join(output[1:]))
                 payload = [hdr, msg.encode("utf-8")]
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
                 self.machine._error_prev.append(payload)
                 self._socket.send_multipart(payload)
+            except Empty:
+                continue
 
 
 class SourceConsumer(StoppableThread):
@@ -90,6 +90,7 @@ class Machine(BaseMachine):
 
     def stop(self):
         self._consumer_thread.stop()
+        self._profiler.unregister()
         time.sleep(0.2) # give the thread a chance to stop
 
     def set_source(self, source_generator):
