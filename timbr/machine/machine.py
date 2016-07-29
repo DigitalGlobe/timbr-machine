@@ -1,3 +1,4 @@
+import dask.async
 from threading import Thread
 import time
 import json
@@ -46,16 +47,17 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['processed'] = self.machine._status['processed'] + 1
                 self.machine._data_prev.append(payload)
                 self._socket.send_multipart(payload)
-            except Empty:
-                continue
-            except Exception as e: # e derives from dask's RemoteException
-                output = self.machine._build_output_on_error(e)
+            except dask.async.RemoteException as re: 
+                # re derives from dask's RemoteException
+                output = self.machine._build_output_on_error(re)
                 hdr = output[0]
                 msg = "[{}]".format(",".join(output[1:]))
                 payload = [hdr, msg.encode("utf-8")]
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
                 self.machine._error_prev.append(payload)
                 self._socket.send_multipart(payload)
+            except Empty:
+                continue
 
 
 class SourceConsumer(StoppableThread):
