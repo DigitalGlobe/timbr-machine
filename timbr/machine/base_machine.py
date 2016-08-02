@@ -81,7 +81,7 @@ class BaseMachine(object):
         return self._status
 
     def __len__(self):
-        return stages
+        return self.stages
 
     def __setitem__(self, pos, fn):
         assert isinstance(pos, (int, long))
