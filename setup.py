@@ -11,7 +11,7 @@ class develop(_develop):
     def run(self):
         _develop.run(self)
         install_nbextension(extension_dir, symlink=True,
-                            overwrite=True, user=False, destination="timbr_machine")
+                            overwrite=True, user=True, destination="timbr_machine")
         cm = ConfigManager()
         cm.update('notebook', {"load_extensions": {"timbr_machine/index": True } })
 
