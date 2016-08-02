@@ -72,7 +72,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 	function load_ipython_extension() {
 	  requirejs(["base/js/namespace", "base/js/events"], function (Jupyter, events) {
-	    __webpack_require__(43);
+	    __webpack_require__(44);
 	    // initialize jupyter react cells, comm mananger and components
 	    _jupyterReactJs2.default.init(Jupyter, events, 'timbr.machine', { components: _components2.default, on_update: on_update });
 	  });
@@ -112,10 +112,14 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	         * creates an instance of a "Manager" used to listen for new comms and create new components
 	         */
 	        var handle_kernel = function(Jupyter, kernel) {
-	          //if ( kernel.comm_manager && !kernel.component_manager ) {
+	          if ( kernel.comm_manager && kernel.component_manager === undefined ) {
+	            kernel.component_manager = new Manager.ComponentManager( kernel );
+	          } 
+
+	          if ( kernel.component_manager ) {
 	            var Component = ReactComponent( component_options );
-	            kernel.component_manager = new Manager( comm_target, kernel, Component );
-	          //}
+	            kernel.component_manager.register( comm_target, Component ) 
+	          }
 	        };
 
 	        /**
@@ -214,18 +218,63 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 /* 3 */
 /***/ function(module, exports) {
 
-	function Manager(target, kernel, Component) {
-	  //this.components = {};
-	  kernel.comm_manager.register_target(target, function (comm, msg) {
-	    if (msg['msg_type'] === 'comm_open') {
-	      //this.components[ comm.comm_id ] = new Component( comm, msg );
-	      new Component(comm, msg);
+	function Manager( kernel ) {
+	  this.kernel = kernel;
+	  this.components = {};
+
+	  this.register = function( target, Component ) {
+	    var self = this;
+	    if ( !this.components[ target ] ) {
+	      this.components[ target ] = { Component: Component };
+	      kernel.comm_manager.register_target( target, function ( comm, msg ) {
+	        if ( msg[ 'msg_type' ] === 'comm_open' ) {
+	          self.components[ target ][ comm.comm_id ] = self.components[ target ].Component( comm, msg );
+	        }
+	      });
 	    }
-	  });
+	    // look for any comms that need to be re-created (page refresh)
+	    this.kernel.comm_info( target, function( info ) { 
+	      var comms = Object.keys( info['content']['comms'] );
+	      if ( comms.length ) {
+	        comms.forEach( function( comm_id ) {
+	          if ( Jupyter.notebook.metadata.react_comms && Jupyter.notebook.metadata.react_comms[ comm_id ] ) {
+	            var cell = self._get_cell( Jupyter.notebook.metadata.react_comms[ comm_id ] );
+	            if ( cell ) {
+	              var module = comm_id.split( '.' ).slice( -1 )[ 0 ];
+	              var newComm = self._create_comm( cell, target, module, comm_id );
+	              self.components[ target ].Component( 
+	                newComm, 
+	                { content: { data: { module: module } } }, 
+	                cell 
+	              );
+	            }
+	          }
+	        });
+	      }
+	    })
+	  };
+
+	  this._get_cell = function( index ) {
+	    return Jupyter.notebook.get_cells()[ parseInt(index) ];
+	  }
+
+	  this._create_comm = function( cell, target, module, comm_id ) {
+	    return this.kernel.comm_manager.new_comm( 
+	      target,  
+	      { module: module, props: {} }, 
+	      cell.get_callbacks(),
+	      {},
+	      comm_id 
+	    );
+	  }
+
 	  return this;
 	};
 
-	module.exports = Manager;
+	module.exports = { 
+	  ComponentManager: Manager 
+	};
+
 
 /***/ },
 /* 4 */
@@ -234,52 +283,70 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	// Base component that handles comm messages and renders components to notebook cell
 
 	module.exports = function Component( options ) {
-	  return function (comm, props) {
+	  return function (comm, props, cell) {
 	    var module = props.content.data.module;
 	    var domId = props.content.data.domId;
+
+	    var _getCellIndex = function( cell_id ) { 
+	      var idx;
+	      Jupyter.notebook.get_cells().forEach( function( c, i){
+	        if ( c.cell_id === cell_id ) {
+	          idx = i;
+	        }
+	      });
+	      return idx;
+	    };
 
 	    // Handle all messages over this comm
 	    var handle_msg = msg => {
 	      var data = msg.content.data;
-
 	      switch (data.method) {
 	        case "update":
 	          if ( options.on_update ) {
 	            return options.on_update(module, data.props);
 	          }
 	          // else re-render
-	          render_component(msg);
+	          render_component( msg );
 	          break;
 	        case "display":
-	          render_component(msg);
+	          // save comm id and cell id to notebook.metadata
+	          var cell = Jupyter.notebook.get_msg_cell( msg.parent_header.msg_id );
+	          if ( cell ) {
+	            if ( !Jupyter.notebook.metadata.react_comms ) {
+	              Jupyter.notebook.metadata.react_comms = {}
+	            }
+	            Jupyter.notebook.metadata.react_comms[ comm.comm_id ] = _getCellIndex( cell.cell_id ) + '';
+	          }
+	          render_component( msg );
 	          break;
 	      }
 	    };
 
-	    var render_component = function (msg) {
-	      var msg_id = msg.parent_header.msg_id;
-	      var cell = Jupyter.notebook.get_msg_cell(msg_id);
+	    var render_component = function ( msg ) {
 	      var newProps = props.content.data;
-	      newProps.cell = cell;
+	      newProps.cell = _getMsgCell( msg );;
 	      newProps.comm = comm;
-	      var element = _createMarkup( options.components[module], newProps );
-	      _render(element, msg);
+	      var element = _createMarkup( options.components[ module ], newProps );
+	      _render( element, msg );
 	    };
 
 	    // Render the component to either the output cell or given domId
-	    var _render = function (element, msg) {
+	    var _render = function ( element, msg ) {
 	      var display;
 	      if (domId) {
-	        display = document.getElementById(domId);
+	        display = document.getElementById( domId );
 	      } else {
-	        display = _outputAreaElement(msg);
+	        display = _outputAreaElement( msg );
 	      }
 	      
 	      var cell = _getMsgCell( msg );
-	      ReactDom.render(element, display);
+	      ReactDom.render( element, display );
 	    };
 
 	    var _getMsgCell = function( msg ) {
+	      if ( cell ) {
+	        return cell;
+	      }
 	      var msg_id = msg.parent_header.msg_id;
 	      return Jupyter.notebook.get_msg_cell( msg_id );
 	    };
@@ -335,6 +402,8 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+	var _desc, _value, _class;
+
 	var _react = __webpack_require__(7);
 
 	var _react2 = _interopRequireDefault(_react);
@@ -342,6 +411,10 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	var _dispatcher = __webpack_require__(39);
 
 	var _dispatcher2 = _interopRequireDefault(_dispatcher);
+
+	var _autobindDecorator = __webpack_require__(43);
+
+	var _autobindDecorator2 = _interopRequireDefault(_autobindDecorator);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -351,7 +424,36 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-	var DisplayStatus = function (_React$Component) {
+	function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
+	  var desc = {};
+	  Object['ke' + 'ys'](descriptor).forEach(function (key) {
+	    desc[key] = descriptor[key];
+	  });
+	  desc.enumerable = !!desc.enumerable;
+	  desc.configurable = !!desc.configurable;
+
+	  if ('value' in desc || desc.initializer) {
+	    desc.writable = true;
+	  }
+
+	  desc = decorators.slice().reverse().reduce(function (desc, decorator) {
+	    return decorator(target, property, desc) || desc;
+	  }, desc);
+
+	  if (context && desc.initializer !== void 0) {
+	    desc.value = desc.initializer ? desc.initializer.call(context) : void 0;
+	    desc.initializer = undefined;
+	  }
+
+	  if (desc.initializer === void 0) {
+	    Object['define' + 'Property'](target, property, desc);
+	    desc = null;
+	  }
+
+	  return desc;
+	}
+
+	var DisplayStatus = (_class = function (_React$Component) {
 	  _inherits(DisplayStatus, _React$Component);
 
 	  function DisplayStatus(props) {
@@ -386,6 +488,11 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	      });
 	    }
 	  }, {
+	    key: 'handleTabSelect',
+	    value: function handleTabSelect(index, last) {
+	      console.log('Selected tab: ' + index + ', Last tab: ' + last);
+	    }
+	  }, {
 	    key: 'render',
 	    value: function render() {
 	      var _this3 = this;
@@ -394,50 +501,87 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 
 	      var action = status.running ? 'Stop' : 'Start';
+	      var running = status.running ? 'Running' : 'Stopped';
 
 	      return _react2.default.createElement(
 	        'div',
 	        { id: 'timbr_machine_status' },
 	        _react2.default.createElement(
 	          'div',
-	          { className: 'timbr-header' },
-	          _react2.default.createElement(
-	            'span',
-	            { className: 'timbr-title' },
-	            'Timbr Machine Status'
-	          ),
+	          { style: { 'float': 'right' } },
 	          _react2.default.createElement(
 	            'button',
-	            { onClick: function onClick() {
+	            { className: 'btn-default', onClick: function onClick() {
 	                return _this3.toggle.apply(_this3);
 	              } },
 	            action
 	          )
 	        ),
-	        Object.keys(status).map(function (field, i) {
-	          return _react2.default.createElement(
-	            'div',
-	            { key: i },
-	            _react2.default.createElement(
-	              'span',
-	              { className: 'field-name' },
-	              field,
-	              ':'
-	            ),
-	            _react2.default.createElement(
-	              'span',
-	              null,
-	              status[field]
-	            )
-	          );
-	        })
+	        _react2.default.createElement(
+	          'div',
+	          { className: 'timbr-header' },
+	          _react2.default.createElement(
+	            'span',
+	            { className: 'timbr-title' },
+	            'Timbr Machine (',
+	            running,
+	            ')'
+	          )
+	        ),
+	        _react2.default.createElement(
+	          'div',
+	          null,
+	          _react2.default.createElement(
+	            'span',
+	            { className: 'field-name' },
+	            'Processed: '
+	          ),
+	          _react2.default.createElement(
+	            'span',
+	            { className: 'field-stat' },
+	            ' ',
+	            status.processed,
+	            ' '
+	          )
+	        ),
+	        _react2.default.createElement(
+	          'div',
+	          null,
+	          _react2.default.createElement(
+	            'span',
+	            { className: 'field-name' },
+	            'Errors: '
+	          ),
+	          _react2.default.createElement(
+	            'span',
+	            { className: 'field-stat' },
+	            ' ',
+	            status.errored,
+	            ' '
+	          )
+	        ),
+	        _react2.default.createElement(
+	          'div',
+	          null,
+	          _react2.default.createElement(
+	            'span',
+	            { className: 'field-name' },
+	            'Queue Length: '
+	          ),
+	          _react2.default.createElement(
+	            'span',
+	            { className: 'field-stat' },
+	            ' ',
+	            status.queue_size,
+	            ' '
+	          )
+	        )
 	      );
 	    }
 	  }]);
 
 	  return DisplayStatus;
-	}(_react2.default.Component);
-
+	}(_react2.default.Component), (_applyDecoratedDescriptor(_class.prototype, 'handleTabSelect', [_autobindDecorator2.default], Object.getOwnPropertyDescriptor(_class.prototype, 'handleTabSelect'), _class.prototype)), _class);
 	exports.default = DisplayStatus;
 	module.exports = exports['default'];
 
@@ -599,7 +743,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	    if (draining) {
 	        return;
 	    }
-	    var timeout = cachedSetTimeout(cleanUpNextTick);
+	    var timeout = cachedSetTimeout.call(null, cleanUpNextTick);
 	    draining = true;
 
 	    var len = queue.length;
@@ -616,7 +760,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    currentQueue = null;
 	    draining = false;
-	    cachedClearTimeout(timeout);
+	    cachedClearTimeout.call(null, timeout);
 	}
 
 	process.nextTick = function (fun) {
@@ -628,7 +772,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    queue.push(new Item(fun, args));
 	    if (queue.length === 1 && !draining) {
-	        cachedSetTimeout(drainQueue, 0);
+	        cachedSetTimeout.call(null, drainQueue, 0);
 	    }
 	};
 
@@ -4683,15 +4827,117 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 43 */
+/***/ function(module, exports) {
+
+	/**
+	 * @copyright 2015, Andrey Popp <8mayday@gmail.com>
+	 *
+	 * The decorator may be used on classes or methods
+	 * ```
+	 * @autobind
+	 * class FullBound {}
+	 *
+	 * class PartBound {
+	 *   @autobind
+	 *   method () {}
+	 * }
+	 * ```
+	 */
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+	exports['default'] = autobind;
+
+	function autobind() {
+	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+	    args[_key] = arguments[_key];
+	  }
+
+	  if (args.length === 1) {
+	    return boundClass.apply(undefined, args);
+	  } else {
+	    return boundMethod.apply(undefined, args);
+	  }
+	}
+
+	/**
+	 * Use boundMethod to bind all methods on the target.prototype
+	 */
+	function boundClass(target) {
+	  // (Using reflect to get all keys including symbols)
+	  var keys = undefined;
+	  // Use Reflect if exists
+	  if (typeof Reflect !== 'undefined' && typeof Reflect.ownKeys === 'function') {
+	    keys = Reflect.ownKeys(target.prototype);
+	  } else {
+	    keys = Object.getOwnPropertyNames(target.prototype);
+	    // use symbols if support is provided
+	    if (typeof Object.getOwnPropertySymbols === 'function') {
+	      keys = keys.concat(Object.getOwnPropertySymbols(target.prototype));
+	    }
+	  }
+
+	  keys.forEach(function (key) {
+	    // Ignore special case target method
+	    if (key === 'constructor') {
+	      return;
+	    }
+
+	    var descriptor = Object.getOwnPropertyDescriptor(target.prototype, key);
+
+	    // Only methods need binding
+	    if (typeof descriptor.value === 'function') {
+	      Object.defineProperty(target.prototype, key, boundMethod(target, key, descriptor));
+	    }
+	  });
+	  return target;
+	}
+
+	/**
+	 * Return a descriptor removing the value and returning a getter
+	 * The getter will return a .bind version of the function
+	 * and memoize the result against a symbol on the instance
+	 */
+	function boundMethod(target, key, descriptor) {
+	  var fn = descriptor.value;
+
+	  if (typeof fn !== 'function') {
+	    throw new Error('@autobind decorator can only be applied to methods not: ' + typeof fn);
+	  }
+
+	  return {
+	    configurable: true,
+	    get: function get() {
+	      if (this === target.prototype || this.hasOwnProperty(key)) {
+	        return fn;
+	      }
+
+	      var boundFn = fn.bind(this);
+	      Object.defineProperty(this, key, {
+	        value: boundFn,
+	        configurable: true,
+	        writable: true
+	      });
+	      return boundFn;
+	    }
+	  };
+	}
+	module.exports = exports['default'];
+
+
+/***/ },
+/* 44 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 
 	// load the styles
-	var content = __webpack_require__(44);
+	var content = __webpack_require__(45);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
-	var update = __webpack_require__(46)(content, {});
+	var update = __webpack_require__(47)(content, {});
 	if(content.locals) module.exports = content.locals;
 	// Hot Module Replacement
 	if(false) {
@@ -4708,10 +4954,10 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ },
-/* 44 */
+/* 45 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(45)();
+	exports = module.exports = __webpack_require__(46)();
 	// imports
 
 
@@ -4722,7 +4968,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 45 */
+/* 46 */
 /***/ function(module, exports) {
 
 	/*
@@ -4778,7 +5024,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 46 */
+/* 47 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*

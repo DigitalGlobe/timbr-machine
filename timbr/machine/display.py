@@ -2,7 +2,7 @@ from traitlets import Dict, observe
 from jupyter_react import Component
 from time import sleep
 
-from .util import StoppableThread
+from timbr.machine.util import StoppableThread
 
 class Poller(StoppableThread):
     """ 
@@ -28,14 +28,12 @@ class Display(Component):
     """ 
       A UI component for displaying status info in notebooks via react components
     """
-    module = 'Display'
-    #_status = Dict()
-
-    def __init__(self, machine, interval=1, **kwargs):
+    def __init__(self, machine, interval=1, module=None, **kwargs):
         super(Display, self).__init__(target_name='timbr.machine')
         self.on_msg(self._handle_msg)
         self.machine = machine
         self.interval = interval
+        self._module = module
         self.send({"method": "display"})
 
         self.machine.stop.add_observer(self.stop)
