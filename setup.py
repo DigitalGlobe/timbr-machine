@@ -14,4 +14,7 @@ setup(name='timbr-machine',
           "dask",
           "ipython"
         ]
+      tests_require=[
+          "nose",
+        ]
       )
