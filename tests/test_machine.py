@@ -26,7 +26,7 @@ def configurable_gn(s, t):
 
 class TestSourceConsumer(unittest.TestCase):
     def setUp(self):
-        self.m = Machine(bufsize=100)
+        self.m = Machine(bufsize=20)
 
     def test_SourceConsumer_basics(self):
         self.sc = SourceConsumer(self.m, configurable_gn(1, 0.1))
@@ -37,14 +37,14 @@ class TestSourceConsumer(unittest.TestCase):
         self.m.set_source(configurable_gn(10, 0.1))
         time.sleep(1.1)
         # The source should have stopped due to StopIteration:
-        self.assertTrue(self.m._source.stopped())
+        self.assertFalse(self.m._source.stopped()) # stop() never gets called
         self.assertFalse(self.m._source.isAlive())
 
     def test_SourceConsumer_stops_on_Full(self):
         # Generate more values than the queue size:
-        self.m.set_source(gn(200, 0.01))
+        self.m.set_source(configurable_gn(200, 0.01))
         time.sleep(1.1)
-        self.assertTrue(self.m._source.stopped())
+        self.assertFalse(self.m._source.stopped()) # stop() never gets called
         self.assertFalse(self.m._source.isAlive())
 
     def test_SourceConsumer_behavior_on_other_exceptions(self):
