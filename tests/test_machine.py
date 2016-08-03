@@ -1,39 +1,128 @@
 import unittest
-from mock import patch, Mock, MagicMock, create_autospec, call
+# from mock import patch, Mock, MagicMock, create_autospec, call
+
+from timbr.machine.base_machine import BaseMachine, json_serialize
+from timbr.machine import Machine 
+from timbr.machine.machine import SourceConsumer, MachineConsumer
+
+try:
+    from Queue import Empty, Full, Queue # Python 2
+except ImportError:
+    from queue import Empty, Full, Queue # Python 3
+
+import dask.async
+from dask.threaded import get
+import functools
+from timbr.machine.util import identity, wrap_transform, json_serializable_exception, StoppableThread
+from timbr.machine.profiler import MachineProfiler
+from bson.objectid import ObjectId
+import time
+import random
+
+def configurable_gn(s, t):
+    for i in xrange(s):
+        yield i
+        time.sleep(t)
+
+class TestSourceConsumer(unittest.TestCase):
+    def setUp(self):
+        self.m = Machine(bufsize=100)
+
+    def test_SourceConsumer_basics(self):
+        self.sc = SourceConsumer(self.m, configurable_gn(1, 0.1))
+        self.assertIsInstance(self.sc, StoppableThread)
+
+    def test_SourceConsumer_stops_on_StopIteration(self):
+        # Set a source consumer, expect StopIteration
+        self.m.start()
+        self.m.set_source(configurable_gn(10, 0.1))
+        time.sleep(1.1)
+        # The source should have stopped due to StopIteration:
+        self.assertTrue(self.m._source.stopped())
+        self.assertFalse(self.m._source.isAlive())
+
+    def test_SourceConsumer_stops_on_Full(self):
+        # Set a source consumer, but don't start the machine consumer
+        # Generate more values than the queue size:
+        self.m.set_source(gn(200, 0.01))
+        time.sleep(1.1)
+        self.assertTrue(self.m._source.stopped())
+        self.assertFalse(self.m._source.isAlive())
+
+    def test_SourceConsumer_behavior_on_other_exceptions(self):
+        # At this point, when an exception is raised on next()
+        # that is not handled, what happens is that the thread dies
+        # before anything calls "stop" on it, so it's dead, but 
+        # stopped() returns False
+
+        def ZeroDivisionError_gn():
+            for i in xrange(10): # will never go past 5
+                yield float(i)/(5-i)
+
+        self.m.start()
+        self.m.set_source(ZeroDivisionError_gn())
+        time.sleep(1.1)
+        self.assertFalse(self.m._source.stopped()) # Although the thread is dead, stopped reports incorrect info
+        self.assertFalse(self.m._source.isAlive())
+
+    def tearDown(self):
+        try:
+            self.sc.stop()
+        except Exception as e:
+            pass
+        try:
+            del self.sc
+        except Exception as e:
+            pass
+        try:
+            self.m._source.stop()
+        except Exception as e:
+            pass
+        try:
+            self.m.stop()
+        except Exception as e:
+            pass
+        try:
+            del self.m
+        except Exception as e:
+            pass
+
+class TestMachine(unittest.TestCase):
+    def setUp(self):
+        self.m = Machine()
+
+    def test_Machine_basics(self):
+        self.assertIsInstance(self.m, BaseMachine)
+        self.assertFalse(self.m.running)
+
+    def test_Machine_running(self):
+        self.m.start()
+        self.assertTrue(self.m.running)
+        self.m.stop()
+        self.assertFalse(self.m.running)
+
+    def tearDown(self):
+        try:
+            self.m.stop()
+        except Exception as e:
+            pass
+        try:
+            del self.m
+        except Exception as e:
+            pass
 
 
-class PatchMixin(object):
-    """
-    Testing utility mixin that provides methods to patch objects so that they
-    will get unpatched automatically.
-    """
+class TestMachineConsumer(unittest.TestCase):
+    def setUp(self):
+        pass
 
-    def patch(self, *args, **kwargs):
-        patcher = patch(*args, **kwargs)
-        self.addCleanup(patcher.stop)
-        return patcher.start()
+    def test_MachineConsumer_basics(self):
+        pass
 
-    def patch_object(self, *args, **kwargs):
-        patcher = patch.object(*args, **kwargs)
-        self.addCleanup(patcher.stop)
-        return patcher.start()
 
-    def patch_dict(self, *args, **kwargs):
-        patcher = patch.dict(*args, **kwargs)
-        self.addCleanup(patcher.stop)
-        return patcher.start()
 
-class TestMachine(PatchMixin, unittest.TestCase):
-	def setup(self):
-		pass
+if __name__ == "__main__":
+    unittest.main()
 
-	def test_Machine(self):
-		pass
-
-	def test_SourceConsumer(self):
-		pass
-
-	def test_MachineConsumer(self):
-		pass
-		
+        
 
