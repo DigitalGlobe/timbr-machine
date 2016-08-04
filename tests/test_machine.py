@@ -16,7 +16,7 @@ import functools
 from timbr.machine.util import identity, wrap_transform, json_serializable_exception, StoppableThread
 from timbr.machine.profiler import MachineProfiler
 from bson.objectid import ObjectId
-import random
+import random, time
 
 
 def configurable_gn(s):
@@ -71,13 +71,14 @@ class TestSourceConsumer(unittest.TestCase):
     def tearDown(self):
         try:
             self.sc.stop()
-        except AttributeError as ae:
-            pass
-        try:
-            self.sc.stop()
             del self.sc
-        except NameError as ne:
+        except (AttributeError, NameError):
             pass
+
+def gn():
+    while True:
+        yield random.randint()
+        time.sleep(0.1)
 
 class TestMachine(unittest.TestCase):
     def setUp(self):
@@ -87,22 +88,24 @@ class TestMachine(unittest.TestCase):
         self.assertIsInstance(self.m, BaseMachine)
         self.assertFalse(self.m.running)
 
-    def test_Machine_running(self):
-        pass
+    def test_Machine_start_stop(self):
+        self.m.start()
+        self.assertTrue(self.m.running)
+        self.m.stop()
+        self.assertFalse(self.m.running)
 
-    def test_Machine_set_source(self):
-        pass
+    def test_Machine_set_source_functionality(self):
+        self.m.start()
+        self.m.set_source(gn())
+        time.sleep(1)
+        self.assertGreater(self.m.status["processed"], 0)
 
     def tearDown(self):
         try:
             self.m.stop()
-        except AttributeError as se:
-            pass
-        try:
             del self.m
-        except NameError as ne:
+        except (AttributeError, NameError):
             pass
-
 
 class TestMachineConsumer(unittest.TestCase):
     def setUp(self):
@@ -112,9 +115,5 @@ class TestMachineConsumer(unittest.TestCase):
         pass
 
 
-
 if __name__ == "__main__":
     unittest.main()
-
-        
-
