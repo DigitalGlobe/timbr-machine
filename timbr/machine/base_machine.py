@@ -47,7 +47,7 @@ class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
         self.q = Queue(bufsize)
         self.tbl = {}
-        self._status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.q.qsize()}
+        self._status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self._qsize}
         self.stages = stages
         self.input = None
         self._dsk = None
@@ -74,6 +74,10 @@ class BaseMachine(object):
         dsk["in"] = (self.q.get, block, timeout)
         output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)])
         return output
+
+    @property
+    def _qsize(self):
+        return self.q.qsize()
 
     @property
     def status(self):
