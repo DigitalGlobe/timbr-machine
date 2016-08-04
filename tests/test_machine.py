@@ -69,7 +69,10 @@ class TestSourceConsumer(unittest.TestCase):
         self.assertFalse(self.sc.isAlive())
 
     def tearDown(self):
-        self.sc.stop()
+        try:
+            self.sc.stop()
+        except AttributeError as ae:
+            pass
         try:
             self.sc.stop()
             del self.sc
@@ -91,7 +94,10 @@ class TestMachine(unittest.TestCase):
         pass
 
     def tearDown(self):
-        self.m.stop()
+        try:
+            self.m.stop()
+        except AttributeError as se:
+            pass
         try:
             del self.m
         except NameError as ne:
