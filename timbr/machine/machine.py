@@ -100,8 +100,11 @@ class Machine(BaseMachine):
 
     def stop(self):
         self._consumer_thread.stop()
-        self._profiler.unregister()
         time.sleep(0.2) # give the thread a chance to stop
+        try:
+            self._profiler.unregister()
+        except KeyError as ke:
+            pass
 
     def set_source(self, source_generator):
         self._source = SourceConsumer(self, source_generator)
