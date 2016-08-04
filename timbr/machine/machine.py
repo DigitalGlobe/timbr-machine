@@ -15,7 +15,7 @@ import zmq
 from .base_machine import BaseMachine
 from .profiler import MachineProfiler
 from .exception import UpstreamError
-from .util import StoppableThread, mkdir_p
+from .util import StoppableThread, mkdir_p, json_serializable_exception
 from bson.objectid import ObjectId
 from collections import deque
 
@@ -117,7 +117,7 @@ class Machine(BaseMachine):
             return False
         return self._consumer_thread.is_alive()
 
-    def _build_output_on_error(self, e):
+    def _build_output_on_error(self, e, formatter=json_serializable_exception):
         errored_task = self._profiler._errored
         tasks = [[t, t + "_s"] for t in ["oid", "in"] + ["f{}".format(i) for i in xrange(self.stages)]]
         output = []
@@ -126,7 +126,7 @@ class Machine(BaseMachine):
                 output.append(self._profiler._cache[fn_s])
             except KeyError as ke:
                 if errored_task in (fn, fn_s):
-                    output.append(self.serialize_fn(e, task=errored_task))
+                    output.append(self.serialize_fn(formatter(e, task=errored_task)))
                 else:
-                    output.append(self.serialize_fn(UpstreamError(fn_s)))
+                    output.append(self.serialize_fn(formatter(UpstreamError(fn_s))))
         return output 
