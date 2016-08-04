@@ -75,11 +75,6 @@ class TestSourceConsumer(unittest.TestCase):
         except (AttributeError, NameError):
             pass
 
-def gn():
-    while True:
-        yield random.randint()
-        time.sleep(0.1)
-
 class TestMachine(unittest.TestCase):
     def setUp(self):
         self.m = Machine()
@@ -87,6 +82,7 @@ class TestMachine(unittest.TestCase):
     def test_Machine_basics(self):
         self.assertIsInstance(self.m, BaseMachine)
         self.assertFalse(self.m.running)
+        self.assertIsInstance(self.m._profiler, MachineProfiler)
 
     def test_Machine_start_stop(self):
         self.m.start()
@@ -95,16 +91,15 @@ class TestMachine(unittest.TestCase):
         self.assertFalse(self.m.running)
 
     def test_Machine_set_source_functionality(self):
-        self.m.start()
-        self.m.set_source(gn())
-        time.sleep(1)
-        self.assertGreater(self.m.status["processed"], 0)
+        self.m.set_source(configurable_gn(10))
+        time.sleep(0.1)
+        self.assertEqual(self.m.status["queue_size"], 10)
 
     def tearDown(self):
         try:
             self.m.stop()
             del self.m
-        except (AttributeError, NameError):
+        except (AttributeError, KeyError, NameError):
             pass
 
 class TestMachineConsumer(unittest.TestCase):
