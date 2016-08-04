@@ -47,11 +47,6 @@ class TestBaseMachine(unittest.TestCase):
         self.assertDictEqual(self.bm.REFERENCE_DASK, RD)
 
     def test_BaseMachine_basics(self):
-        # Test __getitem__, __missing__ behavior
-        for i in xrange(self.bm.stages):
-            with self.assertRaises(KeyError):
-                f = self.bm[i]
-
         # Test __setitem__, __getitem__ and some attrs on the function
         self.bm[0] = fn_a
         f = self.bm[0]
