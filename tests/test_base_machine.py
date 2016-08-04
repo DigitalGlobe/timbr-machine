@@ -11,7 +11,6 @@ import dask.async
 from dask.threaded import get
 import functools
 from timbr.machine.util import identity, wrap_transform, json_serializable_exception
-from timbr.machine.profiler import MachineProfiler
 from bson.objectid import ObjectId
 
 
@@ -32,13 +31,12 @@ class TestBaseMachine(unittest.TestCase):
     def test_BaseMachine_init(self):
         self.assertIsInstance(self.bm.q, Queue)
 
-        status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.bm._qsize}
+        status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.bm.q.qsize()}
         self.assertDictEqual(self.bm._status, status)
 
         self.assertTrue(self.bm._dirty)
         self.assertIs(self.bm._getter.func, get)
         self.assertDictEqual(self.bm._getter.keywords, {"num_workers": 1})
-        self.assertIsInstance(self.bm._profiler, MachineProfiler)
         self.assertIs(self.bm.serialize_fn, json_serialize)
 
         RD = {"oid_s": (str, "oid"), "in_s": (self.bm.serialize_fn, "in")}
