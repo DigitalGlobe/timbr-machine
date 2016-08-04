@@ -1,5 +1,5 @@
 import unittest
-# from mock import patch, Mock, MagicMock, create_autospec, call
+from mock import MagicMock, call
 
 from timbr.machine.base_machine import BaseMachine, json_serialize
 from timbr.machine import Machine 
@@ -19,6 +19,7 @@ from bson.objectid import ObjectId
 import time
 import random
 
+
 def configurable_gn(s, t):
     for i in xrange(s):
         yield i
@@ -27,6 +28,7 @@ def configurable_gn(s, t):
 class TestSourceConsumer(unittest.TestCase):
     def setUp(self):
         self.m = Machine(bufsize=20)
+        self.m.put = MagicMock()
 
     def test_SourceConsumer_basics(self):
         self.sc = SourceConsumer(self.m, configurable_gn(1, 0.1))
@@ -39,6 +41,8 @@ class TestSourceConsumer(unittest.TestCase):
         # The source should have stopped due to StopIteration:
         self.assertFalse(self.m._source.stopped()) # stop() never gets called
         self.assertFalse(self.m._source.isAlive())
+        # The source should have put 10 integers on the queue:
+        self.assertEqual([call(i) for i in xrange(10)], self.m.put.call_args_list)
 
     def test_SourceConsumer_stops_on_Full(self):
         # Generate more values than the queue size:
@@ -46,6 +50,8 @@ class TestSourceConsumer(unittest.TestCase):
         time.sleep(1.1)
         self.assertFalse(self.m._source.stopped()) # stop() never gets called
         self.assertFalse(self.m._source.isAlive())
+        # The source should have put 20 intergers on the queue:
+        self.assertEqual([call(i) for i in xrange(20)], self.m.put.call_args_list)
 
     def test_SourceConsumer_behavior_on_other_exceptions(self):
         # At this point, when an exception is raised on next()
