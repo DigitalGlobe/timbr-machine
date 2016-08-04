@@ -44,15 +44,6 @@ class TestSourceConsumer(unittest.TestCase):
         # The source should have put 10 integers on the queue:
         self.assertEqual([call(i) for i in xrange(10)], self.m.put.call_args_list)
 
-    def test_SourceConsumer_stops_on_Full(self):
-        # Generate more values than the queue size:
-        self.m.set_source(configurable_gn(200, 0.01))
-        time.sleep(1.1)
-        self.assertFalse(self.m._source.stopped()) # stop() never gets called
-        self.assertFalse(self.m._source.isAlive())
-        # The source should have put 20 intergers on the queue:
-        self.assertEqual([call(i) for i in xrange(20)], self.m.put.call_args_list)
-
     def test_SourceConsumer_behavior_on_other_exceptions(self):
         # At this point, when an exception is raised on next()
         # that is not handled, what happens is that the thread dies
