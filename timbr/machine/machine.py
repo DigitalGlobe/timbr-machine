@@ -13,6 +13,7 @@ from IPython import get_ipython
 import zmq
 
 from .base_machine import BaseMachine
+from .profiler import MachineProfiler
 from .util import StoppableThread, mkdir_p
 from bson.objectid import ObjectId
 from collections import deque
@@ -89,8 +90,11 @@ class Machine(BaseMachine):
         self._data_prev = deque(maxlen=10)
         self._error_prev = deque(maxlen=10)
 
+        self._profiler = MachineProfiler()
+
     def start(self):
         if not self.running:
+            self._profiler.register()
             self._consumer_thread = MachineConsumer(self)
             self._consumer_thread.start()
 
@@ -108,3 +112,17 @@ class Machine(BaseMachine):
         if self._consumer_thread is None:
             return False
         return self._consumer_thread.is_alive()
+
+    def _build_output_on_error(self, e):
+        errored_task = self._profiler._errored
+        tasks = [[t, t + "_s"] for t in ["oid", "in"] + ["f{}".format(i) for i in xrange(self.stages)]]
+        output = []
+        for fn, fn_s in tasks:
+            try:
+                output.append(self._profiler._cache[fn_s])
+            except KeyError as ke:
+                if errored_task in (fn, fn_s):
+                    output.append(self.serialize_fn(e, task=errored_task))
+                else:
+                    output.append(self.serialize_fn(UpstreamError(fn_s)))
+        return output 
