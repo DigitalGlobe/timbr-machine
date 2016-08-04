@@ -92,7 +92,7 @@ class TestMachine(unittest.TestCase):
 
     def test_Machine_set_source_functionality(self):
         self.m.set_source(configurable_gn(10))
-        time.sleep(0.1)
+        self.m._source.join()
         self.assertEqual(self.m.status["queue_size"], 10)
 
     def tearDown(self):
