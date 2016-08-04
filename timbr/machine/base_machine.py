@@ -49,11 +49,9 @@ class BaseMachine(object):
         self.tbl = {}
         self._status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self._qsize}
         self.stages = stages
-        self.input = None
         self._dsk = None
         self._dirty = True
         self._getter = partial(get, num_workers=1)
-        self._socket = None
         self._profiler = MachineProfiler()
         self._profiler.register()
 

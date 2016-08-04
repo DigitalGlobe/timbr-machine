@@ -19,14 +19,20 @@ from collections import deque
 
 
 class MachineConsumer(StoppableThread):
-    def __init__(self, machine):
+    def __init__(self, machine, kernel_key=None):
         super(MachineConsumer, self).__init__()
         self.machine = machine
         self._socket = None
         # set local kernel key
-        with open(get_ipython().config["IPKernelApp"]["connection_file"]) as f:
-            config = json.load(f)
-            self._kernel_key = config["key"]
+        try:
+            with open(get_ipython().config["IPKernelApp"]["connection_file"]) as f:
+                config = json.load(f)
+                self._kernel_key = config["key"]
+        except AttributeError as ae:
+            if kernel_key is not None:
+                self._kernel_key = kernel_key
+            else:
+                self._kernel_key = str(ObjectId())
         mkdir_p("/tmp/timbr-machine") # NOTE: Not Windows Safe (but should be)
         self.initialize_pub_stream("ipc:///tmp/timbr-machine/{}".format(self._kernel_key))
 
