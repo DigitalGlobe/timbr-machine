@@ -25,39 +25,53 @@ def configurable_gn(s, t):
         yield i
         time.sleep(t)
 
+class MockMachine(object):
+    def put(self, x):
+        pass
+
 class TestSourceConsumer(unittest.TestCase):
     def setUp(self):
-        self.m = Machine(bufsize=20)
-        self.m.put = MagicMock()
+        self.mm = MockMachine()
+        self.mm.put = MagicMock()
 
     def test_SourceConsumer_basics(self):
-        self.sc = SourceConsumer(self.m, configurable_gn(1, 0.1))
+        self.sc = SourceConsumer(self.mm, configurable_gn(1, 0.1))
         self.assertIsInstance(self.sc, StoppableThread)
 
     def test_SourceConsumer_stops_on_StopIteration(self):
         # Set a source consumer, expect StopIteration
-        self.m.set_source(configurable_gn(10, 0.1))
+        self.sc = SourceConsumer(self.mm, configurable_gn(10, 0.1))
+        self.sc.start()
         time.sleep(1.1)
         # The source should have stopped due to StopIteration:
-        self.assertFalse(self.m._source.stopped()) # stop() never gets called
-        self.assertFalse(self.m._source.isAlive())
+        self.assertFalse(self.sc.stopped()) # stop() never gets called
+        self.assertFalse(self.sc.isAlive())
         # The source should have put 10 integers on the queue:
-        self.assertEqual([call(i) for i in xrange(10)], self.m.put.call_args_list)
+        self.assertEqual([call(i) for i in xrange(10)], self.mm.put.call_args_list)
+
+    def test_SourceConsumer_stops_on_Full(self):
+        def raise_Full_gn():
+            if False:
+                yield
+            else:
+                raise Full
+        # Generate more values than the queue size:
+        self.sc = SourceConsumer(self.mm, raise_Full_gn())
+        self.sc.start()
+        time.sleep(0.1)
+        self.assertFalse(self.sc.stopped()) # stop() never gets called
+        self.assertFalse(self.sc.isAlive())
 
     def test_SourceConsumer_behavior_on_other_exceptions(self):
-        # At this point, when an exception is raised on next()
-        # that is not handled, what happens is that the thread dies
-        # before anything calls "stop" on it, so it's dead, but 
-        # stopped() returns False
-
-        def ZeroDivisionError_gn():
+        def raise_Exception_gn():
             for i in xrange(10): # will never go past 5
                 yield float(i)/(5-i)
 
-        self.m.set_source(ZeroDivisionError_gn())
-        time.sleep(1.1)
-        self.assertFalse(self.m._source.stopped()) # Although the thread is dead, stopped reports incorrect info
-        self.assertFalse(self.m._source.isAlive())
+        self.sc = SourceConsumer(self.mm, raise_Exception_gn())
+        self.sc.start()
+        time.sleep(0.1)
+        self.assertFalse(self.sc.stopped()) # Although the thread is dead, stopped reports incorrect info
+        self.assertFalse(self.sc.isAlive())
 
     def tearDown(self):
         try:
