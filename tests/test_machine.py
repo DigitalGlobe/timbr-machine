@@ -99,7 +99,7 @@ class TestMachine(unittest.TestCase):
         try:
             self.m.stop()
             del self.m
-        except (AttributeError, KeyError, NameError):
+        except (AttributeError, NameError):
             pass
 
 class TestMachineConsumer(unittest.TestCase):
