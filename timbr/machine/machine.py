@@ -14,6 +14,7 @@ import zmq
 
 from .base_machine import BaseMachine
 from .profiler import MachineProfiler
+from .exception import UpstreamError
 from .util import StoppableThread, mkdir_p
 from bson.objectid import ObjectId
 from collections import deque
