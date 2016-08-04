@@ -69,6 +69,7 @@ class TestSourceConsumer(unittest.TestCase):
         self.assertFalse(self.sc.isAlive())
 
     def tearDown(self):
+        self.sc.stop()
         try:
             self.sc.stop()
             del self.sc
@@ -86,14 +87,14 @@ class TestMachine(unittest.TestCase):
     def test_Machine_running(self):
         pass
 
+    def test_Machine_set_source(self):
+        pass
+
     def tearDown(self):
-        try:
-            self.m.stop()
-        except Exception as e:
-            pass
+        self.m.stop()
         try:
             del self.m
-        except Exception as e:
+        except NameError as ne:
             pass
 
 
