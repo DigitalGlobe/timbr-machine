@@ -32,7 +32,7 @@ class TestBaseMachine(unittest.TestCase):
     def test_BaseMachine_init(self):
         self.assertIsInstance(self.bm.q, Queue)
 
-        status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.bm.q._qsize}
+        status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.bm._qsize}
         self.assertDictEqual(self.bm._status, status)
 
         self.assertTrue(self.bm._dirty)
