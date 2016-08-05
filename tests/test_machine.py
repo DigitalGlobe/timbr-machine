@@ -30,21 +30,19 @@ class MockMachine(object):
 class TestSourceConsumer(unittest.TestCase):
     def setUp(self):
         self.mm = MockMachine()
+        self.sc = SourceConsumer(self.mm, configurable_gn(10))
 
     def test_SourceConsumer_basics(self):
-        self.sc = SourceConsumer(self.mm, configurable_gn(10))
         self.assertIsInstance(self.sc, StoppableThread)
 
     def test_SourceConsumer_calls_put_with_generated_values(self):
         self.mm.put = MagicMock()
-        self.sc = SourceConsumer(self.mm, configurable_gn(10))
         self.sc.start()
         self.sc.join()
         self.assertEqual([call(i) for i in xrange(10)], self.mm.put.call_args_list)
 
     def test_SourceConsumer_stops_on_StopIteration(self):
         self.mm.put = MagicMock()
-        self.sc = SourceConsumer(self.mm, configurable_gn(10))
         self.sc.start()
         self.sc.join()
         self.assertFalse(self.sc.stopped()) 
@@ -52,7 +50,6 @@ class TestSourceConsumer(unittest.TestCase):
 
     def test_SourceConsumer_stops_on_Full(self):
         self.mm.put = MagicMock(side_effect = Full)
-        self.sc = SourceConsumer(self.mm, configurable_gn(10))
         self.sc.start()
         self.sc.join()
         self.assertFalse(self.sc.stopped()) # stop() never gets called
