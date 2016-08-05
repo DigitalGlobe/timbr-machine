@@ -12,6 +12,10 @@ setup(name='timbr-machine',
       install_requires=[
           "pymongo>=2.8",
           "dask",
-          "ipython"
+          "ipython",
+        ]
+      tests_require=[
+          "nose",
+          "mock",
         ]
       )

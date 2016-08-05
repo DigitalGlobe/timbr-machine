@@ -47,13 +47,11 @@ class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
         self.q = Queue(bufsize)
         self.tbl = {}
-        self._status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self._qsize}
+        self._status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.q.qsize()}
         self.stages = stages
         self._dsk = None
         self._dirty = True
         self._getter = partial(get, num_workers=1)
-        self._profiler = MachineProfiler()
-        self._profiler.register()
 
         self.serialize_fn = json_serialize
 
@@ -74,12 +72,9 @@ class BaseMachine(object):
         return output
 
     @property
-    def _qsize(self):
-        return self.q.qsize()
-
-    @property
     def status(self):
         self._status["last_processed_time"] = time_from_objectidstr(self._status["last_oid"])
+        self._status["queue_size"] = self.q.qsize()
         return self._status
 
     def __len__(self):
@@ -142,18 +137,4 @@ class BaseMachine(object):
         return s
 
     def print_status(self):
-        print(self.format_status())
-
-    def _build_output_on_error(self, e, formatter=json_serializable_exception):
-        errored_task = self._profiler._errored
-        tasks = [[t, t + "_s"] for t in ["oid", "in"] + ["f{}".format(i) for i in xrange(self.stages)]]
-        output = []
-        for fn, fn_s in tasks:
-            try:
-                output.append(self._profiler._cache[fn_s])
-            except KeyError as ke:
-                if errored_task in (fn, fn_s):
-                    output.append(json_serialize(formatter(e, task=errored_task)))
-                else:
-                    output.append(json_serialize(formatter(UpstreamError(fn_s))))
-        return output      
+        print(self.format_status())    
