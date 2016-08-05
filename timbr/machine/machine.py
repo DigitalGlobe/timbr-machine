@@ -101,7 +101,7 @@ class Machine(BaseMachine):
 
     def stop(self):
         self._consumer_thread.stop()
-        time.sleep(0.2) # give the thread a chance to stop
+        self._consumer_thread.join(timeout=1.0)
         try:
             self._profiler.unregister()
         except KeyError as ke:
