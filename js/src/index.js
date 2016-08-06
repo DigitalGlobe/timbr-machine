@@ -1,25 +1,24 @@
-import JupyterReact from 'jupyter-react-js';
-import components from './components'; 
-import dispatcher from './components/dispatcher';
-
-// An option component update method passed to every component
-// when an update message is received over the comm, 
-// components will dispatch an event to every other component 
-const on_update = ( module, props ) => {
-  dispatcher.dispatch({
-    actionType: module.toLowerCase() + '_update',
-    data: props 
-  });
+if (window.require) {
+    window.require.config({
+        map: {
+            "*" : {
+                "components": "/nbextensions/timbr_machine/components.js"
+            }
+        }
+    });
 }
+
+import JupyterReact from 'jupyter-react-js';
 
 function load_ipython_extension () {
   requirejs([
       "base/js/namespace",
       "base/js/events",
-  ], function( Jupyter, events ) {
+      "components"
+  ], function( Jupyter, events, components ) {
       require('./css/timbr_machine.css');
       // initialize jupyter react cells, comm mananger and components
-      JupyterReact.init( Jupyter, events, 'timbr.machine', { components, on_update } );
+      JupyterReact.init( Jupyter, events, 'timbr.machine', { components } );
   });
 }
 
