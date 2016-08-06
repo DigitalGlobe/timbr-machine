@@ -1,6 +1,5 @@
 from traitlets import Dict, observe
-from .component import Component
-#from jupyter_react import Component
+from jupyter_react import Component
 from time import sleep
 
 from timbr.machine.util import StoppableThread
