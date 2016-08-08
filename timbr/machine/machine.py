@@ -64,15 +64,18 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
                 self.machine._error_prev.append(payload)
                 self._socket.send_multipart(payload)
+                if self.machine.DEVELOP:
+                    raise
             except Empty:
                 continue
 
 
 class SourceConsumer(StoppableThread):
-    def __init__(self, machine, generator):
+    def __init__(self, machine, generator, develop=False):
         super(SourceConsumer, self).__init__()
         self.g = generator
         self.machine = machine
+        self.DEVELOP = develop
 
     def run(self):
         while not self.stopped():
