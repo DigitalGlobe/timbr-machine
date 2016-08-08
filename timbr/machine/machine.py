@@ -55,6 +55,8 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['processed'] = self.machine._status['processed'] + 1
                 self.machine._data_prev.append(payload)
                 self._socket.send_multipart(payload)
+            except Empty:
+                continue
             except dask.async.RemoteException as re: 
                 # re derives from dask's RemoteException
                 output = self.machine._build_output_on_error(re)
@@ -64,10 +66,9 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
                 self.machine._error_prev.append(payload)
                 self._socket.send_multipart(payload)
-                if self.machine.DEVELOP:
+                if self.machine._debug:
                     raise
-            except Empty:
-                continue
+
 
 
 class SourceConsumer(StoppableThread):
@@ -87,13 +88,13 @@ class SourceConsumer(StoppableThread):
                 break
 
 class Machine(BaseMachine):
-    def __init__(self, stages=8, bufsize=1024, develop=False):
+    def __init__(self, stages=8, bufsize=1024, debug=False):
         super(Machine, self).__init__(stages, bufsize)
         self._consumer_thread = None
         self._data_prev = deque(maxlen=10)
         self._error_prev = deque(maxlen=10)
         self._profiler = MachineProfiler()
-        self.DEVELOP = develop
+        self._debug = debug
 
     def start(self):
         if not self.running:
@@ -118,6 +119,12 @@ class Machine(BaseMachine):
         if self._consumer_thread is None:
             return False
         return self._consumer_thread.is_alive()
+
+    def enable_debug_mode(self):
+        if self.running and not self._debug:
+            # warnings.warn()
+            pass
+
 
     def _build_output_on_error(self, e, formatter=json_serializable_exception):
         errored_task = self._profiler._errored
