@@ -136,13 +136,13 @@
         line-height: 1;
       }
 
-      .machinestat-progress-label-queued {
+      .machinestat-progress-label-processed {
         position: absolute;
         left: 4px;
         bottom: 4px;
       }
 
-      .machinestat-progress-label-processed {
+      .machinestat-progress-label-queued {
         position: absolute;
         right: 4px;
         bottom: 4px;
@@ -157,8 +157,14 @@
   .machinestat-label { font-size: 11.7px; line-height: 1; margin: 12px 0 4px; }
 
   .machinestat-sparkline {
-    width: 100%;
+    width: 210px;
     height: 32px;
-    background: #efefef;
+    /*background: #efefef;*/
+
+    .sparkcirle {
+      fill: #98c000;
+    }
   }
 }
+
+
