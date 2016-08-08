@@ -55,6 +55,8 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['processed'] = self.machine._status['processed'] + 1
                 self.machine._data_prev.append(payload)
                 self._socket.send_multipart(payload)
+            except Empty:
+                continue
             except dask.async.RemoteException as re: 
                 # re derives from dask's RemoteException
                 output = self.machine._build_output_on_error(re)
@@ -64,8 +66,7 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
                 self.machine._error_prev.append(payload)
                 self._socket.send_multipart(payload)
-            except Empty:
-                continue
+
 
 
 class SourceConsumer(StoppableThread):
