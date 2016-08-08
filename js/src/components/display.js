@@ -2,8 +2,9 @@ import React from 'react';
 import Sparkline from 'react-sparkline';
 import Classnames from 'classnames';
 
-const sparkVals = Array(30).fill(0);
-const processedVals = Array(30).fill(0);
+const sparkVals = Array(60).fill(0);
+const sparkAverages = Array(60).fill(0);
+let processedVals;
 
 function toggle( props ) {
   const { status = {} } = props;
@@ -32,26 +33,34 @@ function DisplayStatus( props ) {
     );
 
     let processedPercent;
-    let average;
+    let average = 0;
     let errPercent;
     let timeLeft;
 
     if ( typeof status.processed !== 'undefined' ) {
-      const totalQueued = status.processed + status.queue_size;
-      processedPercent = ( status.processed / totalQueued ) * 100;
-      processedVals.push( processedPercent );
-      processedVals.shift();
-      average = sum( processedVals ) / processedVals.length;
-  
+      //console.log(status.errored, status.processed, status.queue_size); 
       const totalProcessed = status.errored + status.processed;
+      const totalQueued = totalProcessed + status.queue_size;
+      
+      processedPercent = ( totalProcessed / ( totalQueued + totalProcessed ) ) * 100;
+
+      if ( !processedVals ) {
+        processedVals = Array(10).fill( processedPercent );
+      } else {
+        processedVals.push( processedPercent );
+        processedVals.shift();
+      }
+
+      average = sum( processedVals ) / processedVals.length;
       errPercent = ( Math.round(( status.errored / totalProcessed ) * 10 ) / 10 ) * 100 || null;
     
       // grow the sparkline
-      const diff = status.processed - sum( sparkVals );
-      sparkVals.push( diff );
+      sparkVals.push( status.processed );
+      const windowSeconds = 10; 
+      sparkAverages.push( sum( sparkVals.slice(Math.max(sparkVals.length - windowSeconds, 1)) ) / windowSeconds );
 
       const avgPerSecond = sum( sparkVals ) / sparkVals.length;
-      timeLeft = Math.round(( status.queue_size / avgPerSecond ) * 100 ) / 100; 
+      timeLeft = (Math.round( status.queue_size / avgPerSecond ) * 100 ) / 100; 
     }
 
 
@@ -64,7 +73,7 @@ function DisplayStatus( props ) {
             <div className="machinestat-performance">
               <div className="machinestat-label">Average per minute</div>
               <div className="machinestat-sparkline">
-                <Sparkline width={200} height={25} data={ sparkVals.slice(Math.max(sparkVals.length - 25, 1))} strokeWidth={'2px'} strokeColor={'#98c000'} />
+                <Sparkline width={200} height={25} data={ sparkAverages.slice(Math.max(sparkVals.length - 60, 1))} strokeWidth={'2px'} strokeColor={'#98c000'} />
               </div>
               <div className="machinestat-movedown">
                 <a href="#" className='btn btn-primary' onClick={ () => toggle( props ) }>{ action }</a>

@@ -85,8 +85,9 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	var sparkVals = Array(30).fill(0);
-	var processedVals = Array(30).fill(0);
+	var sparkVals = Array(60).fill(0);
+	var sparkAverages = Array(60).fill(0);
+	var processedVals = void 0;
 
 	function toggle(props) {
 	  var _props$status = props.status;
@@ -117,26 +118,34 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	  });
 
 	  var processedPercent = void 0;
-	  var average = void 0;
+	  var average = 0;
 	  var errPercent = void 0;
 	  var timeLeft = void 0;
 
 	  if (typeof status.processed !== 'undefined') {
-	    var totalQueued = status.processed + status.queue_size;
-	    processedPercent = status.processed / totalQueued * 100;
-	    processedVals.push(processedPercent);
-	    processedVals.shift();
-	    average = sum(processedVals) / processedVals.length;
-
+	    //console.log(status.errored, status.processed, status.queue_size); 
 	    var totalProcessed = status.errored + status.processed;
+	    var totalQueued = totalProcessed + status.queue_size;
+
+	    processedPercent = totalProcessed / (totalQueued + totalProcessed) * 100;
+
+	    if (!processedVals) {
+	      processedVals = Array(10).fill(processedPercent);
+	    } else {
+	      processedVals.push(processedPercent);
+	      processedVals.shift();
+	    }
+
+	    average = sum(processedVals) / processedVals.length;
 	    errPercent = Math.round(status.errored / totalProcessed * 10) / 10 * 100 || null;
 
 	    // grow the sparkline
-	    var diff = status.processed - sum(sparkVals);
-	    sparkVals.push(diff);
+	    sparkVals.push(status.processed);
+	    var windowSeconds = 10;
+	    sparkAverages.push(sum(sparkVals.slice(Math.max(sparkVals.length - windowSeconds, 1))) / windowSeconds);
 
 	    var avgPerSecond = sum(sparkVals) / sparkVals.length;
-	    timeLeft = Math.round(status.queue_size / avgPerSecond * 100) / 100;
+	    timeLeft = Math.round(status.queue_size / avgPerSecond) * 100 / 100;
 	  }
 
 	  return _react2.default.createElement(
@@ -169,7 +178,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	          _react2.default.createElement(
 	            'div',
 	            { className: 'machinestat-sparkline' },
-	            _react2.default.createElement(_reactSparkline2.default, { width: 200, height: 25, data: sparkVals.slice(Math.max(sparkVals.length - 25, 1)), strokeWidth: '2px', strokeColor: '#98c000' })
+	            _react2.default.createElement(_reactSparkline2.default, { width: 200, height: 25, data: sparkAverages.slice(Math.max(sparkVals.length - 60, 1)), strokeWidth: '2px', strokeColor: '#98c000' })
 	          ),
 	          _react2.default.createElement(
 	            'div',
