@@ -285,7 +285,6 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 	    // Handle all messages over this comm
 	    this.handleMsg = msg => {
-	      console.log('MESSAGE', msg)
 	      var data = msg.content.data;
 	      switch (data.method) {
 	        case "update":
