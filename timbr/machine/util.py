@@ -1,3 +1,7 @@
+
+from collections import namedtuple, OrderedDict
+from itertools import starmap
+
 import threading
 import inspect
 
@@ -24,7 +28,8 @@ def identity(x):
 
 def wrap_transform(fn):
     """
-    This function returns a new function that accepts an arbitrary number of arguments
+    This function returns a new function that accepts 
+    an arbitrary number of arguments
     and calls the wrapped function with the number of arguments that it supports. For
     example:
 
@@ -49,12 +54,18 @@ def wrap_transform(fn):
     return wrapped
 
 
-def json_serializable_exception(e, extra_data={}):
-    #extra_data["_traceback"] = tb.format_tb(e)
-    #extra_data["_exception"] = tb.format_exception_only(e)
-    extra_data["_exception"] = str(e)
-    #extra_data["_exception_dict"] = e.__dict__
-    return(extra_data)
+def json_serializable_exception(e, **kwargs):
+    emsg = {"_exception": {}}
+    exc  = {"exc_value": e.__repr__()}
+    try:
+        exc["exc_class"] = str(e.__class__)
+        exc["exc_type"] = str(e.exception.__class__)
+        exc["exc_tb"] = e.traceback
+    except AttributeError, ae:
+        pass
+    emsg["_exception"].update(exc)
+    emsg["_exception"].update(kwargs)
+    return emsg
 
 import os, errno
 
@@ -65,3 +76,26 @@ def mkdir_p(path):
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else: raise
+
+
+
+
+
+class OrderedDefaultDict(OrderedDict):
+    def __init__(self, default_factory, *args, **kwargs):
+        super(OrderedDefaultDict, self).__init__(*args, **kwargs)
+        assert callable(default_factory)
+        self.default_factory = default_factory
+        
+    def __getitem__(self, key):
+        try:
+            return super(OrderedDefaultDict, self).__getitem__(key)
+        except KeyError:
+            return self.__missing__(key)
+
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        self[key] = value = self.default_factory()
+        return value
+

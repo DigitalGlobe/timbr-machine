@@ -42,5 +42,9 @@ setup(name='timbr-machine',
           "ipython",
           "jupyter-react",
           "observed"
+        ],
+      tests_require=[
+          "nose",
+          "mock",
         ]
       )

@@ -3,8 +3,8 @@ from __future__ import print_function
 from multiprocessing.pool import ThreadPool
 import dask as da
 # NOTE: sync mode wil likely be faster
-from dask.async import get_sync as get
-# from dask.threaded import get
+# from dask.async import get_sync as get
+from dask.threaded import get
 
 _pool = ThreadPool()
 da.set_options(pool=_pool)
@@ -15,16 +15,18 @@ except ImportError:
     from queue import Empty, Full, Queue # Python 3
 
 from bson.objectid import ObjectId
-from functools import wraps # should be used but isn't currently
-from collections import defaultdict
+from functools import wraps, partial # should be used but isn't currently
+from collections import defaultdict, deque
 import inspect
 
 import zmq
 import json
 
 from .util import identity, wrap_transform, json_serializable_exception
-from .display import Display
+from .profiler import MachineProfiler
+from .exception import UpstreamError
 
+from .display import Display
 
 def json_serialize(obj):
     try:
@@ -35,6 +37,11 @@ def json_serialize(obj):
 def time_from_objectidstr(oid):
     return ObjectId(oid).generation_time.isoformat()
 
+def is_serialization_task(task):
+    if task[-2:] == "_s":
+        return True
+    return False
+
 
 class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024):
@@ -44,8 +51,7 @@ class BaseMachine(object):
         self.stages = stages
         self._dsk = None
         self._dirty = True
-        self._getter = get
-        self._socket = None
+        self._getter = partial(get, num_workers=1)
 
         self.serialize_fn = json_serialize
 
@@ -62,7 +68,7 @@ class BaseMachine(object):
     def get(self, block=False, timeout=0.5):
         dsk = dict(self.dsk)
         dsk["in"] = (self.q.get, block, timeout)
-        output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)], rerun_exceptions_locally=True)
+        output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)])
         return output
 
     def display_status(self, interval=1):
@@ -71,6 +77,7 @@ class BaseMachine(object):
     @property
     def status(self):
         self._status["last_processed_time"] = time_from_objectidstr(self._status["last_oid"])
+        self._status["queue_size"] = self.q.qsize()
         return self._status
 
     def __len__(self):
@@ -133,7 +140,4 @@ class BaseMachine(object):
         return s
 
     def print_status(self):
-        print(self.format_status())
-        
-
-
+        print(self.format_status())    

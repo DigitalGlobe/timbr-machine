@@ -1,8 +1,7 @@
+import dask.async
 from threading import Thread
 import time
 import json
-
-from .util import json_serializable_exception
 
 try:
     from Queue import Empty, Full, Queue # Python 2
@@ -14,21 +13,29 @@ from IPython import get_ipython
 import zmq
 
 from .base_machine import BaseMachine
-from .util import StoppableThread, mkdir_p
+from .profiler import MachineProfiler
+from .exception import UpstreamError
+from .util import StoppableThread, mkdir_p, json_serializable_exception
 from bson.objectid import ObjectId
 from collections import deque
 from observed import event
 
 
 class MachineConsumer(StoppableThread):
-    def __init__(self, machine):
+    def __init__(self, machine, kernel_key=None):
         super(MachineConsumer, self).__init__()
         self.machine = machine
         self._socket = None
         # set local kernel key
-        with open(get_ipython().config["IPKernelApp"]["connection_file"]) as f:
-            config = json.load(f)
-            self._kernel_key = config["key"]
+        try:
+            with open(get_ipython().config["IPKernelApp"]["connection_file"]) as f:
+                config = json.load(f)
+                self._kernel_key = config["key"]
+        except AttributeError as ae:
+            if kernel_key is not None:
+                self._kernel_key = kernel_key
+            else:
+                self._kernel_key = str(ObjectId())
         mkdir_p("/tmp/timbr-machine") # NOTE: Not Windows Safe (but should be)
         self.initialize_pub_stream("ipc:///tmp/timbr-machine/{}".format(self._kernel_key))
 
@@ -49,16 +56,17 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['processed'] = self.machine._status['processed'] + 1
                 self.machine._data_prev.append(payload)
                 self._socket.send_multipart(payload)
-            except Empty:
-                continue
-            except Exception as e:
-                hdr = str(ObjectId())
-                errors = [e] + [""] * 8
-                msg = "[{}]".format(",".join([json.dumps(json_serializable_exception(e)) for e in errors]))
+            except dask.async.RemoteException as re: 
+                # re derives from dask's RemoteException
+                output = self.machine._build_output_on_error(re)
+                hdr = output[0]
+                msg = "[{}]".format(",".join(output[1:]))
                 payload = [hdr, msg.encode("utf-8")]
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
                 self.machine._error_prev.append(payload)
                 self._socket.send_multipart(payload)
+            except Empty:
+                continue
 
 
 class SourceConsumer(StoppableThread):
@@ -83,17 +91,23 @@ class Machine(BaseMachine):
         self._consumer_thread = None
         self._data_prev = deque(maxlen=10)
         self._error_prev = deque(maxlen=10)
+        self._profiler = MachineProfiler()
 
     @event
     def start(self):
         if not self.running:
+            self._profiler.register()
             self._consumer_thread = MachineConsumer(self)
             self._consumer_thread.start()
 
     @event
     def stop(self):
         self._consumer_thread.stop()
-        time.sleep(0.2) # give the thread a chance to stop
+        self._consumer_thread.join(timeout=1.0)
+        try:
+            self._profiler.unregister()
+        except KeyError as ke:
+            pass
 
     def set_source(self, source_generator):
         self._source = SourceConsumer(self, source_generator)
@@ -104,3 +118,17 @@ class Machine(BaseMachine):
         if self._consumer_thread is None:
             return False
         return self._consumer_thread.is_alive()
+
+    def _build_output_on_error(self, e, formatter=json_serializable_exception):
+        errored_task = self._profiler._errored
+        tasks = [[t, t + "_s"] for t in ["oid", "in"] + ["f{}".format(i) for i in xrange(self.stages)]]
+        output = []
+        for fn, fn_s in tasks:
+            try:
+                output.append(self._profiler._cache[fn_s])
+            except KeyError as ke:
+                if errored_task in (fn, fn_s):
+                    output.append(self.serialize_fn(formatter(e, task=errored_task)))
+                else:
+                    output.append(self.serialize_fn(formatter(UpstreamError(fn_s))))
+        return output 
