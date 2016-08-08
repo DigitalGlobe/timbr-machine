@@ -35,11 +35,9 @@ class Display(Component):
         self._module = module
         self.send({"method": "display"})
 
-        self.machine.stop.add_observer(self.stop)
-        self.machine.start.add_observer(self.start)
-
-        if self.machine.running is True:
-            self.start()
+        self.machine.stop.add_observer(self._update)
+        self.machine.start.add_observer(self._update)
+        self.start()
 
     def start(self):
         self._poller = Poller(self._update, self.interval)
