@@ -1,0 +1,164 @@
+.machinestat {
+  position: relative;
+
+  .machinestat-status {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 11.7px;
+
+    &:before {
+      content: '';
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: #333333;
+      border-radius: 100%;
+      vertical-align: -1px;
+      margin-right: 2px;
+    }
+
+    &.machinestat-status-running {
+      color: #98c000;
+      &:before {
+        background: #98c000;
+      }
+    }
+
+    &.machinestat-status-paused {
+      color: #fbc000;
+      &:before {
+        background: #fbc000;
+      }
+    }
+
+    &.machinestat-status-stopped {
+      color: #cccccc;
+      &:before {
+        background: #cccccc;
+      }
+    }
+  }
+
+  .machinestat-row {
+    *zoom: 1;
+
+    &:before,&:after {
+      display: table;
+      line-height: 0;
+      content: "";
+    }
+    &:after {
+      clear: both;
+    }
+
+    .machinestat-performance {
+      float: left;
+      width: 35%;
+      padding-right: 12px;
+    }
+
+    .machinestat-meta {
+      float: left;
+      width: 65%;
+      padding-left: 12px;
+      text-align: right;
+    }
+  }
+
+  .machinestat-progress {
+    position: relative;
+
+    .machinestat-progress-key {
+      display: block;
+      *zoom: 1;
+
+      &:before,&:after {
+        display: table;
+        line-height: 0;
+        content: "";
+      }
+      &:after {
+        clear: both;
+      }
+
+      ul {
+        display: block;
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        float: right;
+      }
+
+      li {
+        float: left;
+        margin-left: 12px;
+
+        &[class*=key-]:before {
+          content: '';
+          display: inline-block;
+          width: 11px;
+          height: 11px;
+          margin-right: 4px;
+          vertical-align: -1px;
+        }
+
+        &.key-queued:before { background: #e7e7e7; }
+        &.key-processed:before { background: #98c000; }
+        &.key-average:before { background: #fbc000; }
+      }
+    }
+
+    .machinestat-progress-graph {
+      position: relative;
+      width: 100%;
+      height: 32px;
+      background: #e7e7e7;
+
+      .machinestat-progress-processed {
+        height: 32px;
+        width: 0;
+        background: #98c000;
+      }
+
+      .machinestat-progress-average {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 2px;
+        background: #fbc000;
+      }
+
+      .machinestat-progress-label-queued, .machinestat-progress-label-processed {
+        opacity: 0.5;
+        font-size: 11.7px;
+        line-height: 1;
+      }
+
+      .machinestat-progress-label-queued {
+        position: absolute;
+        left: 4px;
+        bottom: 4px;
+      }
+
+      .machinestat-progress-label-processed {
+        position: absolute;
+        right: 4px;
+        bottom: 4px;
+      }
+    }
+  }
+
+  .machinestat-movedown { margin-top: 12px; }
+
+  .btn { padding: 1px 28px; border: none; }
+
+  .machinestat-label { font-size: 11.7px; line-height: 1; margin: 12px 0 4px; }
+
+  .machinestat-sparkline {
+    width: 100%;
+    height: 32px;
+    background: #efefef;
+  }
+}

@@ -17,21 +17,40 @@ function DisplayStatus( props ) {
     const running = status.running ? 'Running' : 'Stopped';
 
     return ( 
-      <div id="timbr_machine_status">
-        <div style={{'float': 'right'}}>
-          <button className='btn-default' onClick={ () => toggle( props ) }>{ action }</button>
-        </div>
-        <div className="timbr-header">
-          <span className="timbr-title">Timbr Machine Status ({running})</span>
-        </div>
-        <div>
-          <span className='field-name'>Processed: </span><span className='field-stat'> { status.processed } </span>
-        </div>
-        <div>
-          <span className='field-name'>Errors: </span><span className='field-stat'> { status.errored } </span>
-        </div>
-        <div>
-          <span className='field-name'>Queue Length: </span><span className='field-stat'> { status.queue_size } </span>
+      <div>
+        <div className="machinestat">
+          <h5>Timbr Machine Status</h5>
+          <div className="machinestat-status machinestat-status-running">Running</div>
+          <div className="machinestat-row">
+            <div className="machinestat-performance">
+              <div className="machinestat-label">Average per minute</div>
+              <div className="machinestat-sparkline"></div>
+              <div className="machinestat-movedown">
+                <a href="#" className="btn btn-primary">Stop</a>
+                <a href="#" className='btn-default' onClick={ () => toggle( props ) }>{ action }</a>
+              </div>
+            </div>
+            <div className="machinestat-meta">
+              <div className="machinestat-progress">
+                <div className="machinestat-progress-key machinestat-label">
+                  <ul>
+                    <li className="key-queued">Queued</li>
+                    <li className="key-processed">Processed</li>
+                    <li className="key-average">Average</li>
+                  </ul>
+                </div>
+                <div className="machinestat-progress-graph">
+                  <div className="machinestat-progress-processed" style={{ width: '43%' }}></div>
+                  <div className="machinestat-progress-average" style={{ left: '68%' }}></div>
+                  <div className="machinestat-progress-label-queued">100.1k</div>
+                  <div className="machinestat-progress-label-processed">100.1k</div>
+                </div>
+              </div>
+              <div className="machinestat-movedown">
+                Errored: 100 (0.5%) <span className="machinestat-indent">Est. Completion: 100 seconds</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );

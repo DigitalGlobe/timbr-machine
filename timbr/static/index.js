@@ -244,6 +244,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	                { content: { data: { module: module } } }, 
 	                cell 
 	              )
+	              self.components[ target ][ newComm.comm_id ].render();
 	            }
 	          }
 	        });
@@ -334,6 +335,14 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	      ReactDom.render( element, display );
 	    };
 
+	    this.render = function( ) {
+	      var newProps = props.content.data;
+	      newProps.cell = this.cell;
+	      newProps.comm = comm;
+	      var element = this._createMarkup( options.components[ this.module ], newProps );
+	      this._render( element, {} );
+	    }
+
 	    this._getCellIndex = function( cell_id ) {
 	      var idx;
 	      Jupyter.notebook.get_cells().forEach( function( c, i){
@@ -403,8 +412,8 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!./../../node_modules/css-loader/index.js!./timbr_machine.css", function() {
-				var newContent = require("!!./../../node_modules/css-loader/index.js!./timbr_machine.css");
+			module.hot.accept("!!./../../node_modules/css-loader/index.js!./../../node_modules/less-loader/index.js!./timbr_machine.less", function() {
+				var newContent = require("!!./../../node_modules/css-loader/index.js!./../../node_modules/less-loader/index.js!./timbr_machine.less");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -422,7 +431,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 
 	// module
-	exports.push([module.id, "#timbr_machine_status {\n}\n", ""]);
+	exports.push([module.id, ".machinestat {\n  position: relative;\n}\n.machinestat .machinestat-status {\n  position: absolute;\n  top: 0;\n  right: 0;\n  font-size: 11.7px;\n}\n.machinestat .machinestat-status:before {\n  content: '';\n  display: inline-block;\n  width: 10px;\n  height: 10px;\n  background: #333333;\n  border-radius: 100%;\n  vertical-align: -1px;\n  margin-right: 2px;\n}\n.machinestat .machinestat-status.machinestat-status-running {\n  color: #98c000;\n}\n.machinestat .machinestat-status.machinestat-status-running:before {\n  background: #98c000;\n}\n.machinestat .machinestat-status.machinestat-status-paused {\n  color: #fbc000;\n}\n.machinestat .machinestat-status.machinestat-status-paused:before {\n  background: #fbc000;\n}\n.machinestat .machinestat-status.machinestat-status-stopped {\n  color: #cccccc;\n}\n.machinestat .machinestat-status.machinestat-status-stopped:before {\n  background: #cccccc;\n}\n.machinestat .machinestat-row {\n  *zoom: 1;\n}\n.machinestat .machinestat-row:before,\n.machinestat .machinestat-row:after {\n  display: table;\n  line-height: 0;\n  content: \"\";\n}\n.machinestat .machinestat-row:after {\n  clear: both;\n}\n.machinestat .machinestat-row .machinestat-performance {\n  float: left;\n  width: 35%;\n  padding-right: 12px;\n}\n.machinestat .machinestat-row .machinestat-meta {\n  float: left;\n  width: 65%;\n  padding-left: 12px;\n  text-align: right;\n}\n.machinestat .machinestat-progress {\n  position: relative;\n}\n.machinestat .machinestat-progress .machinestat-progress-key {\n  display: block;\n  *zoom: 1;\n}\n.machinestat .machinestat-progress .machinestat-progress-key:before,\n.machinestat .machinestat-progress .machinestat-progress-key:after {\n  display: table;\n  line-height: 0;\n  content: \"\";\n}\n.machinestat .machinestat-progress .machinestat-progress-key:after {\n  clear: both;\n}\n.machinestat .machinestat-progress .machinestat-progress-key ul {\n  display: block;\n  list-style-type: none;\n  margin: 0;\n  padding: 0;\n  float: right;\n}\n.machinestat .machinestat-progress .machinestat-progress-key li {\n  float: left;\n  margin-left: 12px;\n}\n.machinestat .machinestat-progress .machinestat-progress-key li[class*=key-]:before {\n  content: '';\n  display: inline-block;\n  width: 11px;\n  height: 11px;\n  margin-right: 4px;\n  vertical-align: -1px;\n}\n.machinestat .machinestat-progress .machinestat-progress-key li.key-queued:before {\n  background: #e7e7e7;\n}\n.machinestat .machinestat-progress .machinestat-progress-key li.key-processed:before {\n  background: #98c000;\n}\n.machinestat .machinestat-progress .machinestat-progress-key li.key-average:before {\n  background: #fbc000;\n}\n.machinestat .machinestat-progress .machinestat-progress-graph {\n  position: relative;\n  width: 100%;\n  height: 32px;\n  background: #e7e7e7;\n}\n.machinestat .machinestat-progress .machinestat-progress-graph .machinestat-progress-processed {\n  height: 32px;\n  width: 0;\n  background: #98c000;\n}\n.machinestat .machinestat-progress .machinestat-progress-graph .machinestat-progress-average {\n  position: absolute;\n  top: 0;\n  left: 0;\n  bottom: 0;\n  width: 2px;\n  background: #fbc000;\n}\n.machinestat .machinestat-progress .machinestat-progress-graph .machinestat-progress-label-queued,\n.machinestat .machinestat-progress .machinestat-progress-graph .machinestat-progress-label-processed {\n  opacity: 0.5;\n  font-size: 11.7px;\n  line-height: 1;\n}\n.machinestat .machinestat-progress .machinestat-progress-graph .machinestat-progress-label-queued {\n  position: absolute;\n  left: 4px;\n  bottom: 4px;\n}\n.machinestat .machinestat-progress .machinestat-progress-graph .machinestat-progress-label-processed {\n  position: absolute;\n  right: 4px;\n  bottom: 4px;\n}\n.machinestat .machinestat-movedown {\n  margin-top: 12px;\n}\n.machinestat .btn {\n  padding: 1px 28px;\n  border: none;\n}\n.machinestat .machinestat-label {\n  font-size: 11.7px;\n  line-height: 1;\n  margin: 12px 0 4px;\n}\n.machinestat .machinestat-sparkline {\n  width: 100%;\n  height: 32px;\n  background: #efefef;\n}\n", ""]);
 
 	// exports
 

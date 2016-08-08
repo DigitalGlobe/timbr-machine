@@ -1,11 +1,5 @@
 var version = require('./package.json').version;
 
-var loaders = [
-    { 
-      test: /\.json$/, loader: 'json-loader' 
-    }
-];
-
 const babelSettings = {
   plugins: [
     'transform-flow-strip-types',
@@ -34,6 +28,9 @@ module.exports = [
           },
           { 
             test: /\.css$/, loader: "style-loader!css-loader" 
+          },
+          {
+            test: /\.less$/, loader: "style!css!less"
           }
         ]
       }

@@ -101,75 +101,106 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 	  return _react2.default.createElement(
 	    'div',
-	    { id: 'timbr_machine_status' },
+	    null,
 	    _react2.default.createElement(
 	      'div',
-	      { style: { 'float': 'right' } },
+	      { className: 'machinestat' },
 	      _react2.default.createElement(
-	        'button',
-	        { className: 'btn-default', onClick: function onClick() {
-	            return toggle(props);
-	          } },
-	        action
-	      )
-	    ),
-	    _react2.default.createElement(
-	      'div',
-	      { className: 'timbr-header' },
-	      _react2.default.createElement(
-	        'span',
-	        { className: 'timbr-title' },
-	        'Timbr Machine Status (',
-	        running,
-	        ')'
-	      )
-	    ),
-	    _react2.default.createElement(
-	      'div',
-	      null,
-	      _react2.default.createElement(
-	        'span',
-	        { className: 'field-name' },
-	        'Processed: '
+	        'h5',
+	        null,
+	        'Timbr Machine Status'
 	      ),
 	      _react2.default.createElement(
-	        'span',
-	        { className: 'field-stat' },
-	        ' ',
-	        status.processed,
-	        ' '
-	      )
-	    ),
-	    _react2.default.createElement(
-	      'div',
-	      null,
-	      _react2.default.createElement(
-	        'span',
-	        { className: 'field-name' },
-	        'Errors: '
+	        'div',
+	        { className: 'machinestat-status machinestat-status-running' },
+	        'Running'
 	      ),
 	      _react2.default.createElement(
-	        'span',
-	        { className: 'field-stat' },
-	        ' ',
-	        status.errored,
-	        ' '
-	      )
-	    ),
-	    _react2.default.createElement(
-	      'div',
-	      null,
-	      _react2.default.createElement(
-	        'span',
-	        { className: 'field-name' },
-	        'Queue Length: '
-	      ),
-	      _react2.default.createElement(
-	        'span',
-	        { className: 'field-stat' },
-	        ' ',
-	        status.queue_size,
-	        ' '
+	        'div',
+	        { className: 'machinestat-row' },
+	        _react2.default.createElement(
+	          'div',
+	          { className: 'machinestat-performance' },
+	          _react2.default.createElement(
+	            'div',
+	            { className: 'machinestat-label' },
+	            'Average per minute'
+	          ),
+	          _react2.default.createElement('div', { className: 'machinestat-sparkline' }),
+	          _react2.default.createElement(
+	            'div',
+	            { className: 'machinestat-movedown' },
+	            _react2.default.createElement(
+	              'a',
+	              { href: '#', className: 'btn btn-primary' },
+	              'Stop'
+	            ),
+	            _react2.default.createElement(
+	              'a',
+	              { href: '#', className: 'btn-default', onClick: function onClick() {
+	                  return toggle(props);
+	                } },
+	              action
+	            )
+	          )
+	        ),
+	        _react2.default.createElement(
+	          'div',
+	          { className: 'machinestat-meta' },
+	          _react2.default.createElement(
+	            'div',
+	            { className: 'machinestat-progress' },
+	            _react2.default.createElement(
+	              'div',
+	              { className: 'machinestat-progress-key machinestat-label' },
+	              _react2.default.createElement(
+	                'ul',
+	                null,
+	                _react2.default.createElement(
+	                  'li',
+	                  { className: 'key-queued' },
+	                  'Queued'
+	                ),
+	                _react2.default.createElement(
+	                  'li',
+	                  { className: 'key-processed' },
+	                  'Processed'
+	                ),
+	                _react2.default.createElement(
+	                  'li',
+	                  { className: 'key-average' },
+	                  'Average'
+	                )
+	              )
+	            ),
+	            _react2.default.createElement(
+	              'div',
+	              { className: 'machinestat-progress-graph' },
+	              _react2.default.createElement('div', { className: 'machinestat-progress-processed', style: { width: '43%' } }),
+	              _react2.default.createElement('div', { className: 'machinestat-progress-average', style: { left: '68%' } }),
+	              _react2.default.createElement(
+	                'div',
+	                { className: 'machinestat-progress-label-queued' },
+	                '100.1k'
+	              ),
+	              _react2.default.createElement(
+	                'div',
+	                { className: 'machinestat-progress-label-processed' },
+	                '100.1k'
+	              )
+	            )
+	          ),
+	          _react2.default.createElement(
+	            'div',
+	            { className: 'machinestat-movedown' },
+	            'Errored: 100 (0.5%) ',
+	            _react2.default.createElement(
+	              'span',
+	              { className: 'machinestat-indent' },
+	              'Est. Completion: 100 seconds'
+	            )
+	          )
+	        )
 	      )
 	    )
 	  );
