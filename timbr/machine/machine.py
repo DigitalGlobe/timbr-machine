@@ -71,11 +71,10 @@ class MachineConsumer(StoppableThread):
 
 
 class SourceConsumer(StoppableThread):
-    def __init__(self, machine, generator, develop=False):
+    def __init__(self, machine, generator):
         super(SourceConsumer, self).__init__()
         self.g = generator
         self.machine = machine
-        self.DEVELOP = develop
 
     def run(self):
         while not self.stopped():
@@ -88,13 +87,13 @@ class SourceConsumer(StoppableThread):
                 break
 
 class Machine(BaseMachine):
-    def __init__(self, stages=8, bufsize=1024):
+    def __init__(self, stages=8, bufsize=1024, develop=False):
         super(Machine, self).__init__(stages, bufsize)
         self._consumer_thread = None
         self._data_prev = deque(maxlen=10)
         self._error_prev = deque(maxlen=10)
-
         self._profiler = MachineProfiler()
+        self.DEVELOP = develop
 
     def start(self):
         if not self.running:
