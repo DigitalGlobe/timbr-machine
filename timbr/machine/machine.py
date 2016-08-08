@@ -18,6 +18,7 @@ from .exception import UpstreamError
 from .util import StoppableThread, mkdir_p, json_serializable_exception
 from bson.objectid import ObjectId
 from collections import deque
+import warnings
 
 
 class MachineConsumer(StoppableThread):
@@ -122,9 +123,9 @@ class Machine(BaseMachine):
 
     def enable_debug_mode(self):
         if self.running and not self._debug:
-            # warnings.warn()
-            pass
-
+            warnings.warn("Debug mode cannot be enabled on a machine while it is running.")
+            return
+        self._debug = True
 
     def _build_output_on_error(self, e, formatter=json_serializable_exception):
         errored_task = self._profiler._errored
