@@ -75,10 +75,10 @@ function DisplayStatus( props ) {
               sparkAverages.shift();
             }
 
-            sparkMax = Math.round( Math.max.apply(null, sparkAverages) );
+            sparkMax = Math.ceil( Math.max.apply(null, sparkAverages) );
             sparkMin = Math.round( Math.min.apply(null, sparkAverages) );
-            sparkAvg = Math.round( sum( sparkAverages ) / sparkAverages.length );
-            timeLeft = Math.round( ( status.queue_size / sparkAvg ) * 100 ) / 100; 
+            sparkAvg = Math.round( sparkAverages[ sparkAverages.length - 1 ] * 10 ) / 10;
+            timeLeft = Math.ceil( ( status.queue_size /  ( sum( sparkAverages ) / sparkAverages.length ) ) ); //seconds 
           }
         }
       }
