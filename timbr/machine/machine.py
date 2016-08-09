@@ -121,6 +121,10 @@ class Machine(BaseMachine):
             return False
         return self._consumer_thread.is_alive()
 
+    @property
+    def debug(self):
+        return self._debug
+
     def enable_debug_mode(self):
         if self.running and not self._debug:
             warnings.warn("Debug mode cannot be enabled on a machine while it is running.")
