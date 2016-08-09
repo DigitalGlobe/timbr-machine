@@ -18,6 +18,7 @@ from .exception import UpstreamError
 from .util import StoppableThread, mkdir_p, json_serializable_exception
 from bson.objectid import ObjectId
 from collections import deque
+import warnings
 
 
 class MachineConsumer(StoppableThread):
@@ -55,7 +56,7 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['processed'] = self.machine._status['processed'] + 1
                 self.machine._data_prev.append(payload)
                 self._socket.send_multipart(payload)
-            except Empty:
+            except Empty: # This is an instance of RemoteException, so needs to be caught first
                 continue
             except dask.async.RemoteException as re: 
                 # re derives from dask's RemoteException
@@ -66,6 +67,9 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
                 self.machine._error_prev.append(payload)
                 self._socket.send_multipart(payload)
+                if self.machine._debug:
+                    raise
+
 
 
 
@@ -86,13 +90,13 @@ class SourceConsumer(StoppableThread):
                 break
 
 class Machine(BaseMachine):
-    def __init__(self, stages=8, bufsize=1024):
+    def __init__(self, stages=8, bufsize=1024, debug=False):
         super(Machine, self).__init__(stages, bufsize)
         self._consumer_thread = None
         self._data_prev = deque(maxlen=10)
         self._error_prev = deque(maxlen=10)
-
         self._profiler = MachineProfiler()
+        self._debug = debug
 
     def start(self):
         if not self.running:
@@ -117,6 +121,19 @@ class Machine(BaseMachine):
         if self._consumer_thread is None:
             return False
         return self._consumer_thread.is_alive()
+
+    @property
+    def debug(self):
+        return self._debug
+
+    def enable_debug_mode(self):
+        if self.running and not self._debug:
+            warnings.warn("Debug mode cannot be enabled on a machine while it is running.")
+            return
+        self._debug = True
+
+    def disable_debug_mode(self):
+        self._debug = False
 
     def _build_output_on_error(self, e, formatter=json_serializable_exception):
         errored_task = self._profiler._errored

@@ -17,7 +17,8 @@ from timbr.machine.util import identity, wrap_transform, json_serializable_excep
 from timbr.machine.profiler import MachineProfiler
 from bson.objectid import ObjectId
 import random, time
-
+import contextlib
+import warnings
 
 def configurable_gn(s):
     for i in xrange(s):
@@ -72,7 +73,26 @@ class TestSourceConsumer(unittest.TestCase):
         except (AttributeError, NameError):
             pass
 
+class TestException(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+        
+def raise_an_exception():
+    raise TestException("Deal with it")
+
 class TestMachine(unittest.TestCase):
+    @contextlib.contextmanager
+    def assertWarns(self, warning, *args, **kwargs):
+        """A test that checks if a specified warning was raised"""
+        original_filters = warnings.filters[:]
+        warnings.simplefilter('error')
+        if len(args) == 0 and len(kwargs) == 0:
+            with self.assertRaises(warning):
+                yield
+        else:
+            self.assertRaises(warning, *args, **kwargs)
+        warnings.filters = original_filters
+
     def setUp(self):
         self.m = Machine()
 
@@ -96,6 +116,29 @@ class TestMachine(unittest.TestCase):
         self.m.start()
         time.sleep(0.1)
         self.assertEqual(self.m.status["errored"], 0)
+
+    def test_Machine_modes(self):
+        # Test default is False:
+        self.assertFalse(self.m.debug)
+        self.m[0] = raise_an_exception
+        self.m.start()
+        self.m.put(10) # No exception raised
+        time.sleep(1.0)
+        self.assertEqual(self.m.status["errored"], 1)
+        self.assertTrue(self.m.running)
+        # Test we can't enter debug mode from default:
+        with self.assertWarns(UserWarning):
+            self.m.enable_debug_mode()
+        self.assertFalse(self.m.debug)
+
+        # Test entering debug mode after stop:
+        self.m.stop()
+        self.m.enable_debug_mode()
+        self.m.start()
+        self.assertTrue(self.m.debug)
+        self.m.put(10) # Will raise error in thread
+        time.sleep(1.0)
+        self.assertFalse(self.m.running) 
 
     def tearDown(self):
         try:
