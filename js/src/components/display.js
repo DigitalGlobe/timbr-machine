@@ -1,5 +1,5 @@
 import React from 'react';
-import Sparkline from 'react-sparkline';
+import { Sparklines, SparklinesLine, SparklinesSpots } from 'react-sparklines';
 import Classnames from 'classnames';
 
 const sparkVals = [];
@@ -100,7 +100,10 @@ function DisplayStatus( props ) {
                 </div>
                 <div className="machinestat-cell machinestat-cell-padded">
                   <div className="machinestat-sparkline">
-                    <Sparkline width={175} height={30} data={ sparkAverages.slice(Math.max(sparkAverages.length - 60, 1))} strokeWidth={'2px'} strokeColor={'#98c000'} />
+                    <Sparklines data={sparkAverages} limit={30} width={175} height={25} margin={5}>
+                      <SparklinesLine color="#98c000" style={{ strokeWidth: 1, stroke: "#98c000", fill: "none" }} />
+                      <SparklinesSpots style={{ fill: "#98c000" }} />
+                    </Sparklines>
                   </div>
                 </div>
                 <div className="machinestat-cell machinestat-cell-tight machinestat-cell-middle"><small>{ sparkAvg }</small></div>

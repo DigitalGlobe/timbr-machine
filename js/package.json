@@ -35,14 +35,13 @@
     "babel-preset-react": "^6.11.1",
     "babel-preset-stage-1": "^6.5.0",
     "classnames": "^2.2.5",
-    "d3": "^4.2.1",
     "flux": "^2.1.1",
     "jupyter-react-js": "^0.2.0",
     "pui-react-tabs": "^5.2.1",
     "react": "^15.2.1",
     "react-dom": "^15.2.1",
     "react-hot-loader": "^1.3.0",
-    "react-sparkline": "^2.0.0",
+    "react-sparklines": "^1.6.0",
     "react-tabs": "^0.7.0"
   }
 }
