@@ -72,6 +72,7 @@ class MachineConsumer(StoppableThread):
 
 
 
+
 class SourceConsumer(StoppableThread):
     def __init__(self, machine, generator):
         super(SourceConsumer, self).__init__()

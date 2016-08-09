@@ -112,6 +112,11 @@ class TestMachine(unittest.TestCase):
         self.m._source.join()
         self.assertEqual(self.m.status["queue_size"], 10)
 
+    def test_Machine_behavior_on_Empty(self):
+        self.m.start()
+        time.sleep(0.1)
+        self.assertEqual(self.m.status["errored"], 0)
+
     def test_Machine_modes(self):
         # Test default is False:
         self.assertFalse(self.m.debug)
