@@ -43,10 +43,8 @@ function DisplayStatus( props ) {
     let sparkAvg = '';
 
     if ( typeof status.processed !== 'undefined' ) {
-      const totalProcessed = status.errored + status.processed;
-      const totalQueued = totalProcessed + status.queue_size;
-      
-      processedPercent = ( totalProcessed / ( totalQueued + totalProcessed ) ) * 100;
+      const totalQueued = status.processed + status.queue_size;
+      processedPercent = ( status.processed / totalQueued ) * 100;
 
       if ( !processedVals ) {
         processedVals = Array(10).fill( processedPercent );
@@ -56,7 +54,7 @@ function DisplayStatus( props ) {
       }
 
       average = sum( processedVals ) / processedVals.length;
-      errPercent = ( Math.round(( status.errored / totalProcessed ) * 10 ) / 10 ) * 100 || null;
+      errPercent = ( Math.round(( status.errored / status.processed ) * 10 ) / 10 ) * 100 || null;
     
       // grow the sparkline
       if ( status.processed ) {

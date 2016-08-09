@@ -128,10 +128,8 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	  var sparkAvg = '';
 
 	  if (typeof status.processed !== 'undefined') {
-	    var totalProcessed = status.errored + status.processed;
-	    var totalQueued = totalProcessed + status.queue_size;
-
-	    processedPercent = totalProcessed / (totalQueued + totalProcessed) * 100;
+	    var totalQueued = status.processed + status.queue_size;
+	    processedPercent = status.processed / totalQueued * 100;
 
 	    if (!processedVals) {
 	      processedVals = Array(10).fill(processedPercent);
@@ -141,7 +139,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	    }
 
 	    average = sum(processedVals) / processedVals.length;
-	    errPercent = Math.round(status.errored / totalProcessed * 10) / 10 * 100 || null;
+	    errPercent = Math.round(status.errored / status.processed * 10) / 10 * 100 || null;
 
 	    // grow the sparkline
 	    if (status.processed) {
