@@ -58,7 +58,22 @@
       padding-right: 12px;
     }
 
-    .machinestat-meta {
+    .machinestat-performance-high, .machinestat-performance-low {
+      font-size: 11.7px;
+      color: #cccccc;
+      line-height: 1;
+      text-align: right;
+    }
+
+    .machinestat-performance-high {
+
+    }
+
+    .machinestat-performance-low {
+      margin-top: 9px;
+    }
+
+    .machinestat-metastats {
       float: left;
       width: 65%;
       padding-left: 12px;
@@ -151,20 +166,44 @@
   }
 
   .machinestat-movedown { margin-top: 12px; }
+    
+  .machinestat-indent { margin-left: 12px; }
+
+  .machinestat-meta { font-size: 11.7px; font-style: italic; color: #cccccc; }
 
   .btn { padding: 1px 28px; border: none; }
 
   .machinestat-label { font-size: 11.7px; line-height: 1; margin: 12px 0 4px; }
 
   .machinestat-sparkline {
-    width: 210px;
+    width: 175px;
     height: 32px;
-    /*background: #efefef;*/
+  }
 
-    .sparkcirle {
-      fill: #98c000;
+  .machinestat-table {
+    display: table;
+    width: 100%;
+
+    .machinestat-cell {
+      display: table-cell;
+      vertical-align: top;
+
+      &.machinestat-cell-tight {
+        width: 1%;
+        white-space: nowrap;
+      }
+
+      &.machinestat-cell-padded {
+        padding: 0 3px;
+      }
+
+      &.machinestat-cell-middle {
+        vertical-align: middle;
+      }
     }
   }
 }
 
-
+.sparkline circle {
+  fill: #98c000 !important; 
+}

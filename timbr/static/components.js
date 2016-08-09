@@ -85,9 +85,10 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	var sparkVals = Array(60).fill(0);
-	var sparkAverages = Array(60).fill(0);
+	var sparkVals = [];
+	var sparkAverages = [];
 	var processedVals = void 0;
+	var lastVal = void 0;
 
 	function toggle(props) {
 	  var _props$status = props.status;
@@ -122,8 +123,11 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	  var errPercent = void 0;
 	  var timeLeft = void 0;
 
+	  var sparkMax = '';
+	  var sparkMin = '';
+	  var sparkAvg = '';
+
 	  if (typeof status.processed !== 'undefined') {
-	    //console.log(status.errored, status.processed, status.queue_size); 
 	    var totalProcessed = status.errored + status.processed;
 	    var totalQueued = totalProcessed + status.queue_size;
 
@@ -140,12 +144,29 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	    errPercent = Math.round(status.errored / totalProcessed * 10) / 10 * 100 || null;
 
 	    // grow the sparkline
-	    sparkVals.push(status.processed);
-	    var windowSeconds = 10;
-	    sparkAverages.push(sum(sparkVals.slice(Math.max(sparkVals.length - windowSeconds, 1))) / windowSeconds);
+	    if (status.processed) {
+	      if (!lastVal) {
+	        lastVal = status.processed;
+	      } else {
+	        sparkVals.push(status.processed - lastVal);
+	        lastVal = status.processed;
 
-	    var avgPerSecond = sum(sparkVals) / sparkVals.length;
-	    timeLeft = Math.round(status.queue_size / avgPerSecond) * 100 / 100;
+	        if (sparkVals.length > 1) {
+	          var windowSeconds = 10;
+	          var windowVals = sparkVals.slice(Math.max(sparkVals.length - windowSeconds, 1));
+	          sparkAverages.push(sum(windowVals) / windowVals.length);
+
+	          if (sparkAverages.length > 30) {
+	            sparkAverages.shift();
+	          }
+
+	          sparkMax = Math.round(Math.max.apply(null, sparkAverages));
+	          sparkMin = Math.round(Math.min.apply(null, sparkAverages));
+	          sparkAvg = Math.round(sum(sparkAverages) / sparkAverages.length);
+	          timeLeft = Math.round(status.queue_size / sparkAvg * 100) / 100;
+	        }
+	      }
+	    }
 	  }
 
 	  return _react2.default.createElement(
@@ -177,8 +198,39 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	          ),
 	          _react2.default.createElement(
 	            'div',
-	            { className: 'machinestat-sparkline' },
-	            _react2.default.createElement(_reactSparkline2.default, { width: 200, height: 25, data: sparkAverages.slice(Math.max(sparkVals.length - 60, 1)), strokeWidth: '2px', strokeColor: '#98c000' })
+	            { className: 'machinestat-table' },
+	            _react2.default.createElement(
+	              'div',
+	              { className: 'machinestat-cell machinestat-cell-tight' },
+	              _react2.default.createElement(
+	                'div',
+	                { className: 'machinestat-performance-high' },
+	                sparkMax
+	              ),
+	              _react2.default.createElement(
+	                'div',
+	                { className: 'machinestat-performance-low' },
+	                sparkMin
+	              )
+	            ),
+	            _react2.default.createElement(
+	              'div',
+	              { className: 'machinestat-cell machinestat-cell-padded' },
+	              _react2.default.createElement(
+	                'div',
+	                { className: 'machinestat-sparkline' },
+	                _react2.default.createElement(_reactSparkline2.default, { width: 175, height: 30, data: sparkAverages.slice(Math.max(sparkAverages.length - 60, 1)), strokeWidth: '2px', strokeColor: '#98c000' })
+	              )
+	            ),
+	            _react2.default.createElement(
+	              'div',
+	              { className: 'machinestat-cell machinestat-cell-tight machinestat-cell-middle' },
+	              _react2.default.createElement(
+	                'small',
+	                null,
+	                sparkAvg
+	              )
+	            )
 	          ),
 	          _react2.default.createElement(
 	            'div',
@@ -194,7 +246,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	        ),
 	        _react2.default.createElement(
 	          'div',
-	          { className: 'machinestat-meta' },
+	          { className: 'machinestat-metastats' },
 	          _react2.default.createElement(
 	            'div',
 	            { className: 'machinestat-progress' },
@@ -241,7 +293,20 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	          _react2.default.createElement(
 	            'div',
 	            { className: 'machinestat-movedown' },
-	            errPercent && 'Errored: ' + status.errored + ' (' + errPercent + '%)',
+	            status.errored > 0 && errPercent ? _react2.default.createElement(
+	              'span',
+	              null,
+	              'Errored: ',
+	              status.errored,
+	              ' ',
+	              _react2.default.createElement(
+	                'span',
+	                { className: 'machinestat-meta' },
+	                '(',
+	                errPercent,
+	                '%)'
+	              )
+	            ) : '',
 	            ' ',
 	            status.processed && timeLeft ? _react2.default.createElement(
 	              'span',
