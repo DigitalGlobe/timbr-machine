@@ -19,6 +19,7 @@ from .util import StoppableThread, mkdir_p, json_serializable_exception
 from bson.objectid import ObjectId
 from collections import deque
 import warnings
+import sys, traceback
 
 
 class MachineConsumer(StoppableThread):
@@ -75,11 +76,14 @@ class SourceConsumer(StoppableThread):
         super(SourceConsumer, self).__init__()
         self.g = generator
         self.machine = machine
-        self.error = None
+        self._error = {}
+        self._status = {}
         
     @property
     def status(self):
-        return {"running": not self.stopped(), "errored": self.error}
+        _status = {"running": not self.stopped()}
+        _status.update(self._error)
+        return _status
 
     def run(self):
         while not self.stopped():
@@ -88,10 +92,15 @@ class SourceConsumer(StoppableThread):
                 # which will interrupt the source
                 msg = self.g.next()
                 self.machine.put(msg)
-            except Exception as e:
-                self.error = e
+            except (StopIteration, Full):
                 self.stop()
                 break
+            except Exception as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                tb = traceback.format_exception(exc_type, exc_value, exc_traceback )
+                self._error = {"error": e, "traceback": tb, "serialized": self.machine.serialize_fn(json_serializable_exception(e))}
+                self.stop()
+                raise
 
 class Machine(BaseMachine):
     def __init__(self, stages=8, bufsize=1024, debug=False):
