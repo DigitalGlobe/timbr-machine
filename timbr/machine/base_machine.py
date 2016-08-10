@@ -26,7 +26,7 @@ from .util import identity, wrap_transform, json_serializable_exception
 from .profiler import MachineProfiler
 from .exception import UpstreamError
 
-
+from .display import Display
 
 def json_serialize(obj):
     try:
@@ -70,6 +70,9 @@ class BaseMachine(object):
         dsk["in"] = (self.q.get, block, timeout)
         output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)])
         return output
+
+    def display_status(self, interval=1):
+        self._display = Display(self, interval=interval)
 
     @property
     def status(self):

@@ -18,6 +18,7 @@ from .exception import UpstreamError
 from .util import StoppableThread, mkdir_p, json_serializable_exception
 from bson.objectid import ObjectId
 from collections import deque
+from observed import event
 import warnings
 
 
@@ -98,12 +99,14 @@ class Machine(BaseMachine):
         self._profiler = MachineProfiler()
         self._debug = debug
 
+    @event
     def start(self):
         if not self.running:
             self._profiler.register()
             self._consumer_thread = MachineConsumer(self)
             self._consumer_thread.start()
 
+    @event
     def stop(self):
         self._consumer_thread.stop()
         self._consumer_thread.join(timeout=1.0)
