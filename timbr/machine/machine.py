@@ -98,7 +98,7 @@ class SourceConsumer(StoppableThread):
             except Exception as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 tb = traceback.format_exception(exc_type, exc_value, exc_traceback )
-                self._error = {"error": e, "traceback": tb, "serialized": self.machine.serialize_fn(json_serializable_exception(e))}
+                self._error = {"serialized_exception": self.machine.serialize_fn(json_serializable_exception(e, _traceback=tb))}
                 self.stop()
                 raise
 
