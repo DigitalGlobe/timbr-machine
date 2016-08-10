@@ -76,7 +76,10 @@ class SourceConsumer(StoppableThread):
         self.g = generator
         self.machine = machine
         self.error = None
-        self.status = {"running": self.stopped(), "error": self.error}
+        
+    @property
+    def status(self):
+        return {"running": not self.stopped(), "errored": self.error}
 
     def run(self):
         while not self.stopped():
@@ -84,13 +87,9 @@ class SourceConsumer(StoppableThread):
                 # NOTE: next() may block which is okay but put may raise Full
                 # which will interrupt the source
                 msg = self.g.next()
+                self.machine.put(msg)
             except Exception as e:
                 self.error = e
-                self.stop()
-                break
-            try:
-                self.machine.put(msg)
-            except Full as f:
                 self.stop()
                 break
 
