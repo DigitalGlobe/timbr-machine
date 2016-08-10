@@ -70,14 +70,13 @@ class MachineConsumer(StoppableThread):
                 if self.machine._debug:
                     raise
 
-
-
-
 class SourceConsumer(StoppableThread):
     def __init__(self, machine, generator):
         super(SourceConsumer, self).__init__()
         self.g = generator
         self.machine = machine
+        self.error = None
+        self.status = {"running": self.stopped(), "error": self.error}
 
     def run(self):
         while not self.stopped():
@@ -85,8 +84,14 @@ class SourceConsumer(StoppableThread):
                 # NOTE: next() may block which is okay but put may raise Full
                 # which will interrupt the source
                 msg = self.g.next()
+            except Exception as e:
+                self.error = e
+                self.stop()
+                break
+            try:
                 self.machine.put(msg)
-            except (StopIteration, Full):
+            except Full as f:
+                self.stop()
                 break
 
 class Machine(BaseMachine):
@@ -97,6 +102,7 @@ class Machine(BaseMachine):
         self._error_prev = deque(maxlen=10)
         self._profiler = MachineProfiler()
         self._debug = debug
+        self.source = None
 
     def start(self):
         if not self.running:
@@ -113,8 +119,8 @@ class Machine(BaseMachine):
             pass
 
     def set_source(self, source_generator):
-        self._source = SourceConsumer(self, source_generator)
-        self._source.start()
+        self.source = SourceConsumer(self, source_generator)
+        self.source.start()
     
     @property
     def running(self):
