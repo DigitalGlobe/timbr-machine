@@ -139,7 +139,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	      var _this2 = this;
 
 	      _dispatcher2.default.register(function (payload) {
-	        if (payload.actionType === 'display_update') {
+	        if (_this2.props && _this2.props.comm && _this2.props.comm.comm_id === payload.commId && payload.actionType === 'display_update') {
 	          _this2._update(payload.data);
 	        }
 	      });

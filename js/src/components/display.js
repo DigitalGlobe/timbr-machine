@@ -28,7 +28,7 @@ class DisplayStatus extends React.Component {
 
   componentWillMount(){
     dispatcher.register( payload => {
-      if ( payload.actionType === 'display_update' ) {
+      if ( this.props && this.props.comm && this.props.comm.comm_id === payload.commId && payload.actionType === 'display_update' ) {
         this._update( payload.data );
       }
     });

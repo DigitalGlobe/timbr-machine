@@ -67,10 +67,12 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	        __webpack_require__(6);
 	        // initialize jupyter react cells, comm mananger and components
 
-	        var on_update = function on_update(module, props) {
+	        var on_update = function on_update(module, props, commId) {
+	            console.log('sending dispatch', commId);
 	            components.dispatcher.dispatch({
 	                actionType: module.toLowerCase() + '_update',
-	                data: props
+	                data: props,
+	                commId: commId
 	            });
 	        };
 	        _jupyterReactJs2.default.init(Jupyter, events, 'timbr.machine', { components: components, on_update: on_update });
@@ -296,7 +298,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	      switch (data.method) {
 	        case "update":
 	          if ( options.on_update ) {
-	            return options.on_update(this.module, data.props);
+	            return options.on_update(this.module, data.props, msg.content.comm_id);
 	          }
 	          // else re-render
 	          this.renderComponent( msg, data.props );

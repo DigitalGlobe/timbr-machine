@@ -19,10 +19,12 @@ function load_ipython_extension () {
       require('./css/timbr_machine.less');
       // initialize jupyter react cells, comm mananger and components
       
-      const on_update = ( module, props ) => {
+      const on_update = ( module, props, commId ) => {
+        console.log('sending dispatch', commId )
         components.dispatcher.dispatch({
           actionType: module.toLowerCase() + '_update',
-          data: props
+          data: props,
+          commId
         });
       }
       JupyterReact.init( Jupyter, events, 'timbr.machine', { components, on_update } );
