@@ -272,9 +272,9 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 4 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ function(module, exports) {
 
-	/* WEBPACK VAR INJECTION */(function(module) {// Base component that handles comm messages and renders components to notebook cell
+	// Base component that handles comm messages and renders components to notebook cell
 
 	module.exports = function Component( options ) {
 	  return function (comm, props, cell) {
@@ -289,7 +289,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	      switch (data.method) {
 	        case "update":
 	          if ( options.on_update ) {
-	            return options.on_update(module, data.props);
+	            return options.on_update(this.module, data.props, msg.content.comm_id);
 	          }
 	          // else re-render
 	          this.renderComponent( msg, data.props );
@@ -377,25 +377,9 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	  };
 	};
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(5)(module)))
 
 /***/ },
-/* 5 */
-/***/ function(module, exports) {
-
-	module.exports = function(module) {
-		if(!module.webpackPolyfill) {
-			module.deprecate = function() {};
-			module.paths = [];
-			// module.parent = undefined by default
-			module.children = [];
-			module.webpackPolyfill = 1;
-		}
-		return module;
-	}
-
-
-/***/ },
+/* 5 */,
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
