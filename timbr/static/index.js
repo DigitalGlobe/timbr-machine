@@ -64,9 +64,18 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 	function load_ipython_extension() {
 	    requirejs(["base/js/namespace", "base/js/events", "components"], function (Jupyter, events, components) {
-	        __webpack_require__(6);
+	        __webpack_require__(5);
 	        // initialize jupyter react cells, comm mananger and components
-	        _jupyterReactJs2.default.init(Jupyter, events, 'timbr.machine', { components: components });
+
+	        var on_update = function on_update(module, props, commId) {
+	            console.log('sending dispatch', commId);
+	            components.dispatcher.dispatch({
+	                actionType: module.toLowerCase() + '_update',
+	                data: props,
+	                commId: commId
+	            });
+	        };
+	        _jupyterReactJs2.default.init(Jupyter, events, 'timbr.machine', { components: components, on_update: on_update });
 	    });
 	}
 
@@ -379,17 +388,16 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 5 */,
-/* 6 */
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 
 	// load the styles
-	var content = __webpack_require__(7);
+	var content = __webpack_require__(6);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
-	var update = __webpack_require__(9)(content, {});
+	var update = __webpack_require__(8)(content, {});
 	if(content.locals) module.exports = content.locals;
 	// Hot Module Replacement
 	if(false) {
@@ -406,10 +414,10 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ },
-/* 7 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(8)();
+	exports = module.exports = __webpack_require__(7)();
 	// imports
 
 
@@ -420,7 +428,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 8 */
+/* 7 */
 /***/ function(module, exports) {
 
 	/*
@@ -476,7 +484,7 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 9 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*

@@ -1,29 +1,114 @@
 import React from 'react';
 import { Sparklines, SparklinesLine, SparklinesSpots } from 'react-sparklines';
 import Classnames from 'classnames';
+import autobind from 'autobind-decorator';
+import dispatcher from './dispatcher';
 
-const sparkVals = [];
-const sparkAverages = [];
-let processedVals;
-let lastVal;
 
-function toggle( props ) {
-  const { status = {} } = props;
-  props.comm.send({ 
+@autobind
+class DisplayStatus extends React.Component {
+
+  constructor( props ) {
+    super( props );
+    this.state = {
+      status: {},
+      sparkVals: [],
+      sparkAverages: [],
+      processedVals: null,
+      lastVal: null,
+      sparkMax: '',
+      sparkMin: '',
+      sparkAvg: '',
+      errPercent: null,
+      errAverage: 0,
+      processedPercent: 0,
+      timeLeft: 0
+    };
+  }
+
+  componentWillMount(){
+    dispatcher.register( payload => {
+      if ( this.props && this.props.comm && this.props.comm.comm_id === payload.commId && payload.actionType === 'display_update' ) {
+        this._update( payload.data );
+      }
+    });
+  }
+
+  _update( data ) {
+    const state =  { ...this.state };
+    const status = data.status;
+    state.status = status;
+
+    if ( typeof status.processed !== 'undefined' ) {
+      const totalQueued = status.processed + status.queue_size;
+      state.processedPercent = ( status.processed / totalQueued ) * 100;
+
+      if ( !state.processedVals ) {
+        state.processedVals = Array(10).fill( state.processedPercent );
+      } else {
+        state.processedVals.push( state.processedPercent );
+        //state.processedVals.shift();
+      }
+
+      state.errAverage = this.sum( state.processedVals ) / state.processedVals.length;
+      state.errPercent = ( Math.round(( status.errored / status.processed ) * 10 ) / 10 ) * 100 || null;
+
+      // grow the sparkline
+      if ( status.processed ) {
+        if ( !state.lastVal ) {
+          state.lastVal = status.processed;
+        } else {
+          state.sparkVals.push( status.processed - state.lastVal );
+          state.lastVal = status.processed;
+
+          if ( state.sparkVals.length > 1 ) {
+            const windowSeconds = 10;
+            const windowVals = state.sparkVals.slice(Math.max( state.sparkVals.length - windowSeconds, 1))
+            state.sparkAverages.push( this.sum( windowVals ) / windowVals.length );
+
+            if ( state.sparkAverages.length > 30 ) {
+              state.sparkAverages.shift();
+            }
+        
+            state.sparkMax = Math.ceil( Math.max.apply(null, state.sparkAverages) );
+            state.sparkMin = Math.round( Math.min.apply(null, state.sparkAverages) );
+            state.sparkAvg = Math.round( state.sparkAverages[ state.sparkAverages.length - 1 ] * 10 ) / 10;
+            state.timeLeft = Math.ceil( ( status.queue_size /  ( this.sum( state.sparkAverages ) / state.sparkAverages.length ) ) ); //seconds
+          }
+        }
+      }
+    }
+    this.setState({ ...state })
+  }
+  
+  toggle() {
+    const { status = {} } = this.state;
+    this.props.comm.send({ 
       method: 'toggle', 
       data: { 
         action: status.running ? 'stop' : 'start' } 
-      }, props.cell.get_callbacks() );
-}
+      }, this.props.cell.get_callbacks() );
+  }
 
-function sum( vals ) {
-  return vals.reduce( function( a, b ) {
-    return a + b;
-  });
-}
+  sum( vals ) {
+    return vals.reduce( function( a, b ) {
+      return a + b;
+    });
+  }
 
-function DisplayStatus( props ) {
-    const { status = {} } = props;
+  render() {
+    const { 
+      sparkMax,
+      sparkMin,
+      sparkAvg,
+      errPercent,
+      errAverage,
+      sparkAverages,
+      processedPercent,
+      timeLeft,
+      status = {} 
+    } = this.state;
+
     const action = status.running ? 'Stop' : 'Start';
     const running = status.running ? 'Running' : 'Stopped';
 
@@ -32,56 +117,6 @@ function DisplayStatus( props ) {
         'machinestat-status-running': status.running
       }
     );
-
-    let processedPercent;
-    let average = 0;
-    let errPercent;
-    let timeLeft;
-
-    let sparkMax = '';
-    let sparkMin = '';
-    let sparkAvg = '';
-
-    if ( typeof status.processed !== 'undefined' ) {
-      const totalQueued = status.processed + status.queue_size;
-      processedPercent = ( status.processed / totalQueued ) * 100;
-
-      if ( !processedVals ) {
-        processedVals = Array(10).fill( processedPercent );
-      } else {
-        processedVals.push( processedPercent );
-        processedVals.shift();
-      }
-
-      average = sum( processedVals ) / processedVals.length;
-      errPercent = ( Math.round(( status.errored / status.processed ) * 10 ) / 10 ) * 100 || null;
-    
-      // grow the sparkline
-      if ( status.processed ) {
-        if ( !lastVal ) {
-          lastVal = status.processed;
-        } else {
-          sparkVals.push( status.processed - lastVal );
-          lastVal = status.processed;
-
-          if ( sparkVals.length > 1 ) {
-            const windowSeconds = 10; 
-            const windowVals = sparkVals.slice(Math.max(sparkVals.length - windowSeconds, 1))
-            sparkAverages.push( sum( windowVals ) / windowVals.length );
-
-            if ( sparkAverages.length > 30 ) {
-              sparkAverages.shift();
-            }
-
-            sparkMax = Math.ceil( Math.max.apply(null, sparkAverages) );
-            sparkMin = Math.round( Math.min.apply(null, sparkAverages) );
-            sparkAvg = Math.round( sparkAverages[ sparkAverages.length - 1 ] * 10 ) / 10;
-            timeLeft = Math.ceil( ( status.queue_size /  ( sum( sparkAverages ) / sparkAverages.length ) ) ); //seconds 
-          }
-        }
-      }
-    }
-
 
     return ( 
       <div>
@@ -108,7 +143,7 @@ function DisplayStatus( props ) {
               </div>
 
               <div className="machinestat-movedown">
-                <a href="#" className='btn btn-primary' onClick={ () => toggle( props ) }>{ action }</a>
+                <a href="#" className='btn btn-primary' onClick={ this.toggle }>{ action }</a>
               </div>
             </div>
             <div className="machinestat-metastats">
@@ -122,7 +157,7 @@ function DisplayStatus( props ) {
                 </div>
                 <div className="machinestat-progress-graph">
                   <div className="machinestat-progress-processed" style={{ width: `${processedPercent}%` }}></div>
-                  <div className="machinestat-progress-average" style={{ left: `${average}%` }}></div>
+                  <div className="machinestat-progress-average" style={{ left: `${errAverage}%` }}></div>
                   <div className="machinestat-progress-label-processed">{ status.processed }</div>
                   <div className="machinestat-progress-label-queued">{ status.queue_size }</div>
                 </div>
@@ -137,6 +172,7 @@ function DisplayStatus( props ) {
         </div>
       </div>
     );
+  }
 }
 
 export default DisplayStatus;
