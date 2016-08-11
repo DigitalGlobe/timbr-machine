@@ -54,10 +54,15 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 	var _display2 = _interopRequireDefault(_display);
 
+	var _dispatcher = __webpack_require__(37);
+
+	var _dispatcher2 = _interopRequireDefault(_dispatcher);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	exports.default = {
-	  Display: _display2.default
+	  Display: _display2.default,
+	  dispatcher: _dispatcher2.default
 	};
 	module.exports = exports['default'];
 
@@ -71,6 +76,12 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	  value: true
 	});
 
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	var _class;
+
 	var _react = __webpack_require__(2);
 
 	var _react2 = _interopRequireDefault(_react);
@@ -81,247 +92,307 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 
 	var _classnames2 = _interopRequireDefault(_classnames);
 
+	var _autobindDecorator = __webpack_require__(36);
+
+	var _autobindDecorator2 = _interopRequireDefault(_autobindDecorator);
+
+	var _dispatcher = __webpack_require__(37);
+
+	var _dispatcher2 = _interopRequireDefault(_dispatcher);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	var sparkVals = [];
-	var sparkAverages = [];
-	var processedVals = void 0;
-	var lastVal = void 0;
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	function toggle(props) {
-	  var _props$status = props.status;
-	  var status = _props$status === undefined ? {} : _props$status;
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-	  props.comm.send({
-	    method: 'toggle',
-	    data: {
-	      action: status.running ? 'stop' : 'start' }
-	  }, props.cell.get_callbacks());
-	}
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-	function sum(vals) {
-	  return vals.reduce(function (a, b) {
-	    return a + b;
-	  });
-	}
+	var DisplayStatus = (0, _autobindDecorator2.default)(_class = function (_React$Component) {
+	  _inherits(DisplayStatus, _React$Component);
 
-	function DisplayStatus(props) {
-	  var _props$status2 = props.status;
-	  var status = _props$status2 === undefined ? {} : _props$status2;
+	  function DisplayStatus(props) {
+	    _classCallCheck(this, DisplayStatus);
 
-	  var action = status.running ? 'Stop' : 'Start';
-	  var running = status.running ? 'Running' : 'Stopped';
+	    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(DisplayStatus).call(this, props));
 
-	  var statusClasses = (0, _classnames2.default)('machinestat-status', {
-	    'machinestat-status-running': status.running
-	  });
-
-	  var processedPercent = void 0;
-	  var average = 0;
-	  var errPercent = void 0;
-	  var timeLeft = void 0;
-
-	  var sparkMax = '';
-	  var sparkMin = '';
-	  var sparkAvg = '';
-
-	  if (typeof status.processed !== 'undefined') {
-	    var totalQueued = status.processed + status.queue_size;
-	    processedPercent = status.processed / totalQueued * 100;
-
-	    if (!processedVals) {
-	      processedVals = Array(10).fill(processedPercent);
-	    } else {
-	      processedVals.push(processedPercent);
-	      processedVals.shift();
-	    }
-
-	    average = sum(processedVals) / processedVals.length;
-	    errPercent = Math.round(status.errored / status.processed * 10) / 10 * 100 || null;
-
-	    // grow the sparkline
-	    if (status.processed) {
-	      if (!lastVal) {
-	        lastVal = status.processed;
-	      } else {
-	        sparkVals.push(status.processed - lastVal);
-	        lastVal = status.processed;
-
-	        if (sparkVals.length > 1) {
-	          var windowSeconds = 10;
-	          var windowVals = sparkVals.slice(Math.max(sparkVals.length - windowSeconds, 1));
-	          sparkAverages.push(sum(windowVals) / windowVals.length);
-
-	          if (sparkAverages.length > 30) {
-	            sparkAverages.shift();
-	          }
-
-	          sparkMax = Math.ceil(Math.max.apply(null, sparkAverages));
-	          sparkMin = Math.round(Math.min.apply(null, sparkAverages));
-	          sparkAvg = Math.round(sparkAverages[sparkAverages.length - 1] * 10) / 10;
-	          timeLeft = Math.ceil(status.queue_size / (sum(sparkAverages) / sparkAverages.length)); //seconds 
-	        }
-	      }
-	    }
+	    _this.state = {
+	      status: {},
+	      sparkVals: [],
+	      sparkAverages: [],
+	      processedVals: null,
+	      lastVal: null,
+	      sparkMax: '',
+	      sparkMin: '',
+	      sparkAvg: '',
+	      errPercent: null,
+	      errAverage: 0,
+	      processedPercent: 0,
+	      timeLeft: 0
+	    };
+	    return _this;
 	  }
 
-	  return _react2.default.createElement(
-	    'div',
-	    null,
-	    _react2.default.createElement(
-	      'div',
-	      { className: 'machinestat' },
-	      _react2.default.createElement(
-	        'h5',
+	  _createClass(DisplayStatus, [{
+	    key: 'componentWillMount',
+	    value: function componentWillMount() {
+	      var _this2 = this;
+
+	      _dispatcher2.default.register(function (payload) {
+	        if (payload.actionType === 'display_update') {
+	          _this2._update(payload.data);
+	        }
+	      });
+	    }
+	  }, {
+	    key: '_update',
+	    value: function _update(data) {
+	      var state = _extends({}, this.state);
+	      var status = data.status;
+	      state.status = status;
+
+	      if (typeof status.processed !== 'undefined') {
+	        var totalQueued = status.processed + status.queue_size;
+	        state.processedPercent = status.processed / totalQueued * 100;
+
+	        if (!state.processedVals) {
+	          state.processedVals = Array(10).fill(state.processedPercent);
+	        } else {
+	          state.processedVals.push(state.processedPercent);
+	          //state.processedVals.shift();
+	        }
+
+	        state.errAverage = this.sum(state.processedVals) / state.processedVals.length;
+	        state.errPercent = Math.round(status.errored / status.processed * 10) / 10 * 100 || null;
+
+	        // grow the sparkline
+	        if (status.processed) {
+	          if (!state.lastVal) {
+	            state.lastVal = status.processed;
+	          } else {
+	            state.sparkVals.push(status.processed - state.lastVal);
+	            state.lastVal = status.processed;
+
+	            if (state.sparkVals.length > 1) {
+	              var windowSeconds = 10;
+	              var windowVals = state.sparkVals.slice(Math.max(state.sparkVals.length - windowSeconds, 1));
+	              state.sparkAverages.push(this.sum(windowVals) / windowVals.length);
+
+	              if (state.sparkAverages.length > 30) {
+	                state.sparkAverages.shift();
+	              }
+
+	              state.sparkMax = Math.ceil(Math.max.apply(null, state.sparkAverages));
+	              state.sparkMin = Math.round(Math.min.apply(null, state.sparkAverages));
+	              state.sparkAvg = Math.round(state.sparkAverages[state.sparkAverages.length - 1] * 10) / 10;
+	              state.timeLeft = Math.ceil(status.queue_size / (this.sum(state.sparkAverages) / state.sparkAverages.length)); //seconds
+	            }
+	          }
+	        }
+	      }
+	      this.setState(_extends({}, state));
+	    }
+	  }, {
+	    key: 'toggle',
+	    value: function toggle() {
+	      var _state$status = this.state.status;
+	      var status = _state$status === undefined ? {} : _state$status;
+
+	      this.props.comm.send({
+	        method: 'toggle',
+	        data: {
+	          action: status.running ? 'stop' : 'start' }
+	      }, this.props.cell.get_callbacks());
+	    }
+	  }, {
+	    key: 'sum',
+	    value: function sum(vals) {
+	      return vals.reduce(function (a, b) {
+	        return a + b;
+	      });
+	    }
+	  }, {
+	    key: 'render',
+	    value: function render() {
+	      var _state = this.state;
+	      var sparkMax = _state.sparkMax;
+	      var sparkMin = _state.sparkMin;
+	      var sparkAvg = _state.sparkAvg;
+	      var errPercent = _state.errPercent;
+	      var errAverage = _state.errAverage;
+	      var sparkAverages = _state.sparkAverages;
+	      var processedPercent = _state.processedPercent;
+	      var timeLeft = _state.timeLeft;
+	      var _state$status2 = _state.status;
+	      var status = _state$status2 === undefined ? {} : _state$status2;
+
+
+	      var action = status.running ? 'Stop' : 'Start';
+	      var running = status.running ? 'Running' : 'Stopped';
+
+	      var statusClasses = (0, _classnames2.default)('machinestat-status', {
+	        'machinestat-status-running': status.running
+	      });
+
+	      return _react2.default.createElement(
+	        'div',
 	        null,
-	        'Timbr Machine Status'
-	      ),
-	      _react2.default.createElement(
-	        'div',
-	        { className: statusClasses },
-	        running
-	      ),
-	      _react2.default.createElement(
-	        'div',
-	        { className: 'machinestat-row' },
 	        _react2.default.createElement(
 	          'div',
-	          { className: 'machinestat-performance' },
+	          { className: 'machinestat' },
 	          _react2.default.createElement(
-	            'div',
-	            { className: 'machinestat-label' },
-	            'Average per minute'
+	            'h5',
+	            null,
+	            'Timbr Machine Status'
 	          ),
 	          _react2.default.createElement(
 	            'div',
-	            { className: 'machinestat-table' },
+	            { className: statusClasses },
+	            running
+	          ),
+	          _react2.default.createElement(
+	            'div',
+	            { className: 'machinestat-row' },
 	            _react2.default.createElement(
 	              'div',
-	              { className: 'machinestat-cell machinestat-cell-tight' },
+	              { className: 'machinestat-performance' },
 	              _react2.default.createElement(
 	                'div',
-	                { className: 'machinestat-performance-high' },
-	                sparkMax
+	                { className: 'machinestat-label' },
+	                'Average per minute'
 	              ),
 	              _react2.default.createElement(
 	                'div',
-	                { className: 'machinestat-performance-low' },
-	                sparkMin
-	              )
-	            ),
-	            _react2.default.createElement(
-	              'div',
-	              { className: 'machinestat-cell machinestat-cell-padded' },
+	                { className: 'machinestat-table' },
+	                _react2.default.createElement(
+	                  'div',
+	                  { className: 'machinestat-cell machinestat-cell-tight' },
+	                  _react2.default.createElement(
+	                    'div',
+	                    { className: 'machinestat-performance-high' },
+	                    sparkMax
+	                  ),
+	                  _react2.default.createElement(
+	                    'div',
+	                    { className: 'machinestat-performance-low' },
+	                    sparkMin
+	                  )
+	                ),
+	                _react2.default.createElement(
+	                  'div',
+	                  { className: 'machinestat-cell machinestat-cell-padded' },
+	                  _react2.default.createElement(
+	                    'div',
+	                    { className: 'machinestat-sparkline' },
+	                    _react2.default.createElement(
+	                      _reactSparklines.Sparklines,
+	                      { data: sparkAverages, limit: 30, width: 175, height: 25, margin: 5 },
+	                      _react2.default.createElement(_reactSparklines.SparklinesLine, { color: '#98c000', style: { strokeWidth: 1, stroke: "#98c000", fill: "none" } }),
+	                      _react2.default.createElement(_reactSparklines.SparklinesSpots, { style: { fill: "#98c000" } })
+	                    )
+	                  )
+	                ),
+	                _react2.default.createElement(
+	                  'div',
+	                  { className: 'machinestat-cell machinestat-cell-tight machinestat-cell-middle' },
+	                  _react2.default.createElement(
+	                    'small',
+	                    null,
+	                    sparkAvg
+	                  )
+	                )
+	              ),
 	              _react2.default.createElement(
 	                'div',
-	                { className: 'machinestat-sparkline' },
+	                { className: 'machinestat-movedown' },
 	                _react2.default.createElement(
-	                  _reactSparklines.Sparklines,
-	                  { data: sparkAverages, limit: 30, width: 175, height: 25, margin: 5 },
-	                  _react2.default.createElement(_reactSparklines.SparklinesLine, { color: '#98c000', style: { strokeWidth: 1, stroke: "#98c000", fill: "none" } }),
-	                  _react2.default.createElement(_reactSparklines.SparklinesSpots, { style: { fill: "#98c000" } })
+	                  'a',
+	                  { href: '#', className: 'btn btn-primary', onClick: this.toggle },
+	                  action
 	                )
 	              )
 	            ),
 	            _react2.default.createElement(
 	              'div',
-	              { className: 'machinestat-cell machinestat-cell-tight machinestat-cell-middle' },
-	              _react2.default.createElement(
-	                'small',
-	                null,
-	                sparkAvg
-	              )
-	            )
-	          ),
-	          _react2.default.createElement(
-	            'div',
-	            { className: 'machinestat-movedown' },
-	            _react2.default.createElement(
-	              'a',
-	              { href: '#', className: 'btn btn-primary', onClick: function onClick() {
-	                  return toggle(props);
-	                } },
-	              action
-	            )
-	          )
-	        ),
-	        _react2.default.createElement(
-	          'div',
-	          { className: 'machinestat-metastats' },
-	          _react2.default.createElement(
-	            'div',
-	            { className: 'machinestat-progress' },
-	            _react2.default.createElement(
-	              'div',
-	              { className: 'machinestat-progress-key machinestat-label' },
-	              _react2.default.createElement(
-	                'ul',
-	                null,
-	                _react2.default.createElement(
-	                  'li',
-	                  { className: 'key-queued' },
-	                  'Queued'
-	                ),
-	                _react2.default.createElement(
-	                  'li',
-	                  { className: 'key-processed' },
-	                  'Processed'
-	                ),
-	                _react2.default.createElement(
-	                  'li',
-	                  { className: 'key-average' },
-	                  'Average'
-	                )
-	              )
-	            ),
-	            _react2.default.createElement(
-	              'div',
-	              { className: 'machinestat-progress-graph' },
-	              _react2.default.createElement('div', { className: 'machinestat-progress-processed', style: { width: processedPercent + '%' } }),
-	              _react2.default.createElement('div', { className: 'machinestat-progress-average', style: { left: average + '%' } }),
+	              { className: 'machinestat-metastats' },
 	              _react2.default.createElement(
 	                'div',
-	                { className: 'machinestat-progress-label-processed' },
-	                status.processed
+	                { className: 'machinestat-progress' },
+	                _react2.default.createElement(
+	                  'div',
+	                  { className: 'machinestat-progress-key machinestat-label' },
+	                  _react2.default.createElement(
+	                    'ul',
+	                    null,
+	                    _react2.default.createElement(
+	                      'li',
+	                      { className: 'key-queued' },
+	                      'Queued'
+	                    ),
+	                    _react2.default.createElement(
+	                      'li',
+	                      { className: 'key-processed' },
+	                      'Processed'
+	                    ),
+	                    _react2.default.createElement(
+	                      'li',
+	                      { className: 'key-average' },
+	                      'Average'
+	                    )
+	                  )
+	                ),
+	                _react2.default.createElement(
+	                  'div',
+	                  { className: 'machinestat-progress-graph' },
+	                  _react2.default.createElement('div', { className: 'machinestat-progress-processed', style: { width: processedPercent + '%' } }),
+	                  _react2.default.createElement('div', { className: 'machinestat-progress-average', style: { left: errAverage + '%' } }),
+	                  _react2.default.createElement(
+	                    'div',
+	                    { className: 'machinestat-progress-label-processed' },
+	                    status.processed
+	                  ),
+	                  _react2.default.createElement(
+	                    'div',
+	                    { className: 'machinestat-progress-label-queued' },
+	                    status.queue_size
+	                  )
+	                )
 	              ),
 	              _react2.default.createElement(
 	                'div',
-	                { className: 'machinestat-progress-label-queued' },
-	                status.queue_size
+	                { className: 'machinestat-movedown' },
+	                status.errored > 0 && errPercent ? _react2.default.createElement(
+	                  'span',
+	                  null,
+	                  'Errored: ',
+	                  status.errored,
+	                  ' ',
+	                  _react2.default.createElement(
+	                    'span',
+	                    { className: 'machinestat-meta' },
+	                    '(',
+	                    errPercent,
+	                    '%)'
+	                  )
+	                ) : '',
+	                ' ',
+	                status.processed && timeLeft ? _react2.default.createElement(
+	                  'span',
+	                  { className: 'machinestat-indent' },
+	                  'Est. Completion: ',
+	                  timeLeft,
+	                  ' seconds'
+	                ) : ''
 	              )
 	            )
-	          ),
-	          _react2.default.createElement(
-	            'div',
-	            { className: 'machinestat-movedown' },
-	            status.errored > 0 && errPercent ? _react2.default.createElement(
-	              'span',
-	              null,
-	              'Errored: ',
-	              status.errored,
-	              ' ',
-	              _react2.default.createElement(
-	                'span',
-	                { className: 'machinestat-meta' },
-	                '(',
-	                errPercent,
-	                '%)'
-	              )
-	            ) : '',
-	            ' ',
-	            status.processed && timeLeft ? _react2.default.createElement(
-	              'span',
-	              { className: 'machinestat-indent' },
-	              'Est. Completion: ',
-	              timeLeft,
-	              ' seconds'
-	            ) : ''
 	          )
 	        )
-	      )
-	    )
-	  );
-	}
+	      );
+	    }
+	  }]);
+
+	  return DisplayStatus;
+	}(_react2.default.Component)) || _class;
 
 	exports.default = DisplayStatus;
 	module.exports = exports['default'];
@@ -5372,6 +5443,431 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 		}
 	}());
 
+
+/***/ },
+/* 36 */
+/***/ function(module, exports) {
+
+	/**
+	 * @copyright 2015, Andrey Popp <8mayday@gmail.com>
+	 *
+	 * The decorator may be used on classes or methods
+	 * ```
+	 * @autobind
+	 * class FullBound {}
+	 *
+	 * class PartBound {
+	 *   @autobind
+	 *   method () {}
+	 * }
+	 * ```
+	 */
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+	exports['default'] = autobind;
+
+	function autobind() {
+	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+	    args[_key] = arguments[_key];
+	  }
+
+	  if (args.length === 1) {
+	    return boundClass.apply(undefined, args);
+	  } else {
+	    return boundMethod.apply(undefined, args);
+	  }
+	}
+
+	/**
+	 * Use boundMethod to bind all methods on the target.prototype
+	 */
+	function boundClass(target) {
+	  // (Using reflect to get all keys including symbols)
+	  var keys = undefined;
+	  // Use Reflect if exists
+	  if (typeof Reflect !== 'undefined' && typeof Reflect.ownKeys === 'function') {
+	    keys = Reflect.ownKeys(target.prototype);
+	  } else {
+	    keys = Object.getOwnPropertyNames(target.prototype);
+	    // use symbols if support is provided
+	    if (typeof Object.getOwnPropertySymbols === 'function') {
+	      keys = keys.concat(Object.getOwnPropertySymbols(target.prototype));
+	    }
+	  }
+
+	  keys.forEach(function (key) {
+	    // Ignore special case target method
+	    if (key === 'constructor') {
+	      return;
+	    }
+
+	    var descriptor = Object.getOwnPropertyDescriptor(target.prototype, key);
+
+	    // Only methods need binding
+	    if (typeof descriptor.value === 'function') {
+	      Object.defineProperty(target.prototype, key, boundMethod(target, key, descriptor));
+	    }
+	  });
+	  return target;
+	}
+
+	/**
+	 * Return a descriptor removing the value and returning a getter
+	 * The getter will return a .bind version of the function
+	 * and memoize the result against a symbol on the instance
+	 */
+	function boundMethod(target, key, descriptor) {
+	  var fn = descriptor.value;
+
+	  if (typeof fn !== 'function') {
+	    throw new Error('@autobind decorator can only be applied to methods not: ' + typeof fn);
+	  }
+
+	  return {
+	    configurable: true,
+	    get: function get() {
+	      if (this === target.prototype || this.hasOwnProperty(key)) {
+	        return fn;
+	      }
+
+	      var boundFn = fn.bind(this);
+	      Object.defineProperty(this, key, {
+	        value: boundFn,
+	        configurable: true,
+	        writable: true
+	      });
+	      return boundFn;
+	    }
+	  };
+	}
+	module.exports = exports['default'];
+
+
+/***/ },
+/* 37 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+
+	var _flux = __webpack_require__(38);
+
+	exports.default = new _flux.Dispatcher();
+	module.exports = exports['default'];
+
+/***/ },
+/* 38 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Copyright (c) 2014-2015, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 */
+
+	module.exports.Dispatcher = __webpack_require__(39);
+
+
+/***/ },
+/* 39 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(process) {/**
+	 * Copyright (c) 2014-2015, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 *
+	 * @providesModule Dispatcher
+	 * 
+	 * @preventMunge
+	 */
+
+	'use strict';
+
+	exports.__esModule = true;
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+	var invariant = __webpack_require__(40);
+
+	var _prefix = 'ID_';
+
+	/**
+	 * Dispatcher is used to broadcast payloads to registered callbacks. This is
+	 * different from generic pub-sub systems in two ways:
+	 *
+	 *   1) Callbacks are not subscribed to particular events. Every payload is
+	 *      dispatched to every registered callback.
+	 *   2) Callbacks can be deferred in whole or part until other callbacks have
+	 *      been executed.
+	 *
+	 * For example, consider this hypothetical flight destination form, which
+	 * selects a default city when a country is selected:
+	 *
+	 *   var flightDispatcher = new Dispatcher();
+	 *
+	 *   // Keeps track of which country is selected
+	 *   var CountryStore = {country: null};
+	 *
+	 *   // Keeps track of which city is selected
+	 *   var CityStore = {city: null};
+	 *
+	 *   // Keeps track of the base flight price of the selected city
+	 *   var FlightPriceStore = {price: null}
+	 *
+	 * When a user changes the selected city, we dispatch the payload:
+	 *
+	 *   flightDispatcher.dispatch({
+	 *     actionType: 'city-update',
+	 *     selectedCity: 'paris'
+	 *   });
+	 *
+	 * This payload is digested by `CityStore`:
+	 *
+	 *   flightDispatcher.register(function(payload) {
+	 *     if (payload.actionType === 'city-update') {
+	 *       CityStore.city = payload.selectedCity;
+	 *     }
+	 *   });
+	 *
+	 * When the user selects a country, we dispatch the payload:
+	 *
+	 *   flightDispatcher.dispatch({
+	 *     actionType: 'country-update',
+	 *     selectedCountry: 'australia'
+	 *   });
+	 *
+	 * This payload is digested by both stores:
+	 *
+	 *   CountryStore.dispatchToken = flightDispatcher.register(function(payload) {
+	 *     if (payload.actionType === 'country-update') {
+	 *       CountryStore.country = payload.selectedCountry;
+	 *     }
+	 *   });
+	 *
+	 * When the callback to update `CountryStore` is registered, we save a reference
+	 * to the returned token. Using this token with `waitFor()`, we can guarantee
+	 * that `CountryStore` is updated before the callback that updates `CityStore`
+	 * needs to query its data.
+	 *
+	 *   CityStore.dispatchToken = flightDispatcher.register(function(payload) {
+	 *     if (payload.actionType === 'country-update') {
+	 *       // `CountryStore.country` may not be updated.
+	 *       flightDispatcher.waitFor([CountryStore.dispatchToken]);
+	 *       // `CountryStore.country` is now guaranteed to be updated.
+	 *
+	 *       // Select the default city for the new country
+	 *       CityStore.city = getDefaultCityForCountry(CountryStore.country);
+	 *     }
+	 *   });
+	 *
+	 * The usage of `waitFor()` can be chained, for example:
+	 *
+	 *   FlightPriceStore.dispatchToken =
+	 *     flightDispatcher.register(function(payload) {
+	 *       switch (payload.actionType) {
+	 *         case 'country-update':
+	 *         case 'city-update':
+	 *           flightDispatcher.waitFor([CityStore.dispatchToken]);
+	 *           FlightPriceStore.price =
+	 *             getFlightPriceStore(CountryStore.country, CityStore.city);
+	 *           break;
+	 *     }
+	 *   });
+	 *
+	 * The `country-update` payload will be guaranteed to invoke the stores'
+	 * registered callbacks in order: `CountryStore`, `CityStore`, then
+	 * `FlightPriceStore`.
+	 */
+
+	var Dispatcher = (function () {
+	  function Dispatcher() {
+	    _classCallCheck(this, Dispatcher);
+
+	    this._callbacks = {};
+	    this._isDispatching = false;
+	    this._isHandled = {};
+	    this._isPending = {};
+	    this._lastID = 1;
+	  }
+
+	  /**
+	   * Registers a callback to be invoked with every dispatched payload. Returns
+	   * a token that can be used with `waitFor()`.
+	   */
+
+	  Dispatcher.prototype.register = function register(callback) {
+	    var id = _prefix + this._lastID++;
+	    this._callbacks[id] = callback;
+	    return id;
+	  };
+
+	  /**
+	   * Removes a callback based on its token.
+	   */
+
+	  Dispatcher.prototype.unregister = function unregister(id) {
+	    !this._callbacks[id] ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Dispatcher.unregister(...): `%s` does not map to a registered callback.', id) : invariant(false) : undefined;
+	    delete this._callbacks[id];
+	  };
+
+	  /**
+	   * Waits for the callbacks specified to be invoked before continuing execution
+	   * of the current callback. This method should only be used by a callback in
+	   * response to a dispatched payload.
+	   */
+
+	  Dispatcher.prototype.waitFor = function waitFor(ids) {
+	    !this._isDispatching ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Dispatcher.waitFor(...): Must be invoked while dispatching.') : invariant(false) : undefined;
+	    for (var ii = 0; ii < ids.length; ii++) {
+	      var id = ids[ii];
+	      if (this._isPending[id]) {
+	        !this._isHandled[id] ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Dispatcher.waitFor(...): Circular dependency detected while ' + 'waiting for `%s`.', id) : invariant(false) : undefined;
+	        continue;
+	      }
+	      !this._callbacks[id] ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Dispatcher.waitFor(...): `%s` does not map to a registered callback.', id) : invariant(false) : undefined;
+	      this._invokeCallback(id);
+	    }
+	  };
+
+	  /**
+	   * Dispatches a payload to all registered callbacks.
+	   */
+
+	  Dispatcher.prototype.dispatch = function dispatch(payload) {
+	    !!this._isDispatching ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Dispatch.dispatch(...): Cannot dispatch in the middle of a dispatch.') : invariant(false) : undefined;
+	    this._startDispatching(payload);
+	    try {
+	      for (var id in this._callbacks) {
+	        if (this._isPending[id]) {
+	          continue;
+	        }
+	        this._invokeCallback(id);
+	      }
+	    } finally {
+	      this._stopDispatching();
+	    }
+	  };
+
+	  /**
+	   * Is this Dispatcher currently dispatching.
+	   */
+
+	  Dispatcher.prototype.isDispatching = function isDispatching() {
+	    return this._isDispatching;
+	  };
+
+	  /**
+	   * Call the callback stored with the given id. Also do some internal
+	   * bookkeeping.
+	   *
+	   * @internal
+	   */
+
+	  Dispatcher.prototype._invokeCallback = function _invokeCallback(id) {
+	    this._isPending[id] = true;
+	    this._callbacks[id](this._pendingPayload);
+	    this._isHandled[id] = true;
+	  };
+
+	  /**
+	   * Set up bookkeeping needed when dispatching.
+	   *
+	   * @internal
+	   */
+
+	  Dispatcher.prototype._startDispatching = function _startDispatching(payload) {
+	    for (var id in this._callbacks) {
+	      this._isPending[id] = false;
+	      this._isHandled[id] = false;
+	    }
+	    this._pendingPayload = payload;
+	    this._isDispatching = true;
+	  };
+
+	  /**
+	   * Clear bookkeeping used for dispatching.
+	   *
+	   * @internal
+	   */
+
+	  Dispatcher.prototype._stopDispatching = function _stopDispatching() {
+	    delete this._pendingPayload;
+	    this._isDispatching = false;
+	  };
+
+	  return Dispatcher;
+	})();
+
+	module.exports = Dispatcher;
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
+
+/***/ },
+/* 40 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(process) {/**
+	 * Copyright 2013-2015, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 *
+	 * @providesModule invariant
+	 */
+
+	"use strict";
+
+	/**
+	 * Use invariant() to assert state which your program assumes to be true.
+	 *
+	 * Provide sprintf-style format (only %s is supported) and arguments
+	 * to provide information about what broke and what you were
+	 * expecting.
+	 *
+	 * The invariant message will be stripped in production, but the invariant
+	 * will remain to ensure logic does not differ in production.
+	 */
+
+	var invariant = function (condition, format, a, b, c, d, e, f) {
+	  if (process.env.NODE_ENV !== 'production') {
+	    if (format === undefined) {
+	      throw new Error('invariant requires an error message argument');
+	    }
+	  }
+
+	  if (!condition) {
+	    var error;
+	    if (format === undefined) {
+	      error = new Error('Minified exception occurred; use the non-minified dev environment ' + 'for the full error message and additional helpful warnings.');
+	    } else {
+	      var args = [a, b, c, d, e, f];
+	      var argIndex = 0;
+	      error = new Error('Invariant Violation: ' + format.replace(/%s/g, function () {
+	        return args[argIndex++];
+	      }));
+	    }
+
+	    error.framesToPop = 1; // we don't care about invariant's own frame
+	    throw error;
+	  }
+	};
+
+	module.exports = invariant;
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ }
 /******/ ])});;

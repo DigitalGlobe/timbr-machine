@@ -18,7 +18,14 @@ function load_ipython_extension () {
   ], function( Jupyter, events, components ) {
       require('./css/timbr_machine.less');
       // initialize jupyter react cells, comm mananger and components
-      JupyterReact.init( Jupyter, events, 'timbr.machine', { components } );
+      
+      const on_update = ( module, props ) => {
+        components.dispatcher.dispatch({
+          actionType: module.toLowerCase() + '_update',
+          data: props
+        });
+      }
+      JupyterReact.init( Jupyter, events, 'timbr.machine', { components, on_update } );
   });
 }
 
