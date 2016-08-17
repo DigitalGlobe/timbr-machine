@@ -131,7 +131,10 @@ class Machine(BaseMachine):
 
     def set_source(self, source_generator):
         self.source = SourceConsumer(self, source_generator)
-        self.source.start()
+        
+    def start_source(self):
+        if self.source is not None:
+            self.source.start()
     
     @property
     def running(self):
