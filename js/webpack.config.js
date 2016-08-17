@@ -2,7 +2,6 @@ var version = require('./package.json').version;
 
 const babelSettings = {
   plugins: [
-    'transform-flow-strip-types',
     'add-module-exports',
     'transform-regenerator',
     'transform-decorators-legacy'
@@ -48,6 +47,9 @@ module.exports = [
             test: /\.js?$/,
             exclude: /(node_modules|bower_components)/,
             loaders: [`babel?${JSON.stringify( babelSettings )}`]
+          },
+          { 
+            test: /\.less$/, loader: "style!css!less"
           }
         ]
       }

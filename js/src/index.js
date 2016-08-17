@@ -16,11 +16,8 @@ function load_ipython_extension () {
       "base/js/events",
       "components"
   ], function( Jupyter, events, components ) {
-      require('./css/timbr_machine.less');
       // initialize jupyter react cells, comm mananger and components
-      
       const on_update = ( module, props, commId ) => {
-        console.log('sending dispatch', commId )
         components.dispatcher.dispatch({
           actionType: module.toLowerCase() + '_update',
           data: props,

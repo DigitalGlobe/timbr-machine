@@ -24,19 +24,24 @@ class DisplayStatus extends React.Component {
       processedPercent: 0,
       timeLeft: 0
     };
+    this.state = this._update( props );
   }
 
   componentWillMount(){
     dispatcher.register( payload => {
       if ( this.props && this.props.comm && this.props.comm.comm_id === payload.commId && payload.actionType === 'display_update' ) {
-        this._update( payload.data );
+        this.setState( this._update( payload.data ) ); 
       }
     });
   }
 
+  componentWillReceiveProps( newProps ) {
+    this.setState( this._update( newProps ) ); 
+  } 
+
   _update( data ) {
     const state =  { ...this.state };
-    const status = data.status;
+    const { status } = data;
     state.status = status;
 
     if ( typeof status.processed !== 'undefined' ) {
@@ -47,7 +52,6 @@ class DisplayStatus extends React.Component {
         state.processedVals = Array(10).fill( state.processedPercent );
       } else {
         state.processedVals.push( state.processedPercent );
-        //state.processedVals.shift();
       }
 
       state.errAverage = this.sum( state.processedVals ) / state.processedVals.length;
@@ -78,7 +82,14 @@ class DisplayStatus extends React.Component {
         }
       }
     }
-    this.setState({ ...state })
+    return state;
+  }
+
+  callbacks() {
+    if ( this.props.cell ) {
+      return this.props.cell.get_callbacks();
+    } 
+    return {};
   }
   
   toggle() {
@@ -87,7 +98,7 @@ class DisplayStatus extends React.Component {
       method: 'toggle', 
       data: { 
         action: status.running ? 'stop' : 'start' } 
-      }, this.props.cell.get_callbacks() );
+      }, this.callbacks() );
   }
 
   sum( vals ) {
