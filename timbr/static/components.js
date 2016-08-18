@@ -156,7 +156,8 @@ define(function() { return /******/ (function(modules) { // webpackBootstrap
 	    key: '_update',
 	    value: function _update(data) {
 	      var state = _extends({}, this.state);
-	      var status = data.status;
+	      var _data$status = data.status;
+	      var status = _data$status === undefined ? {} : _data$status;
 
 	      state.status = status;
 

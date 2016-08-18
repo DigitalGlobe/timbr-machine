@@ -41,7 +41,7 @@ class DisplayStatus extends React.Component {
 
   _update( data ) {
     const state =  { ...this.state };
-    const { status } = data;
+    const { status = {} } = data;
     state.status = status;
 
     if ( typeof status.processed !== 'undefined' ) {
