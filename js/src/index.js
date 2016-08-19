@@ -1,21 +1,11 @@
-if (window.require) {
-    window.require.config({
-        map: {
-            "*" : {
-                "components": "/nbextensions/timbr_machine/components.js"
-            }
-        }
-    });
-}
-
+import components from 'react-timbr-machine'; 
 import JupyterReact from 'jupyter-react-js';
 
 function load_ipython_extension () {
   requirejs([
       "base/js/namespace",
       "base/js/events",
-      "components"
-  ], function( Jupyter, events, components ) {
+  ], function( Jupyter, events ) {
       // initialize jupyter react cells, comm mananger and components
       const on_update = ( module, props, commId ) => {
         components.dispatcher.dispatch({

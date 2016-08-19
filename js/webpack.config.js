@@ -33,25 +33,5 @@ module.exports = [
           }
         ]
       }
-    },
-    {
-      entry: './src/components/index.js',
-      output: {
-          filename: 'components.js',
-          path: '../timbr/static',
-          libraryTarget: 'amd'
-      },
-      module : {
-        loaders : [
-          {
-            test: /\.js?$/,
-            exclude: /(node_modules|bower_components)/,
-            loaders: [`babel?${JSON.stringify( babelSettings )}`]
-          },
-          { 
-            test: /\.less$/, loader: "style!css!less"
-          }
-        ]
-      }
     }
 ];
