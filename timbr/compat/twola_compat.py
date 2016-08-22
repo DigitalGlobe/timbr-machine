@@ -1,6 +1,6 @@
 from __future__ import print_function
 from timbr.machine import Machine 
-import collections
+from collections import OrderedDict
 import yaml
 import os
 import shlex
@@ -24,40 +24,38 @@ def _compile_forest(x, stk=[]):
         stk.append(x)
         nodes.append(tuple(stk))
         stk.pop()
-    return nodes        
+    return nodes
+
+def generate_template(ntransforms):
+    lines = []
+    lines.append("from timbr.machine import Machine\nMACHINE=Machine()\nfrom {source[0]} import {source[1]}")
+    lines.append("MACHINE.set_source({source[1]}())")
+    for i in range(ntransforms):
+        lines.append("from {f" + str(i) + "[0]} import {f" + str(i) + "[1]}")
+        lines.append("MACHINE[" + str(i) + "] = {f" + str(i) + "[1]}")
+    lines.append("MACHINE.start()")
+    return "\n".join(lines)
+
+def get_module_entrypoint(full_mod_path):
+    assert(os.path.exists(full_mod_path))
+    with open(full_mod_path) as f:
+        f.readline()
+        cmds = f.readline()
+    args = shlex.split(cmds)
+    return args[3].strip("()")
     
-def machine_from_project(project_path):
-    machine = Machine()
-    topology_path = os.path.join(project_path, "topology.yaml")
-    with open(topology_path) as f:
+def generate_project_structure(project_path):
+    ds = OrderedDict()
+    with open(os.path.join(project_path, "topology.yaml")) as f:
         tree = yaml.load(f)
-    prefix_list = _compile_forest(tree)[-1]
-    # first configure the machine:
-    for ind, cmd in enumerate(prefix_list[1:]):
-        args = shlex.split(cmd)
-        f, entrypoint = args[0] # use a parser 
-        f = os.path.join(project_path, f)
-        assert os.path.exists(f)
-        try:
-            usereffect = imp.load_source("usereffect", f)
-            exec "entrypoint = usereffect.%s" % entrypoint
-            assert callable(entrypoint) # should be a function
-            machine[ind] = entrypoint
-        except Exception as e: # figure out what exceptions
-            print "could not configure machine with function {} from module {}".format(usereffect, f)
-            raise
-    # set the source
-    cmd = prefix_list[0]
-    args = shlex.split(cmd)
-    f, entrypoint = args[0], args[-1]
-    f = os.path.join(project_path, f)
-    assert os.path.exists(f)
-    try:
-        usereffect = imp.load_source("usereffect", f)
-        exec "entrypoint = usereffect.%s" % entrypoint
-        assert isinstance(usereffect, collections.Iterable)
-        machine.set_source(entrypoint)
-    except Exception as e:
-        print "could not set machine source with iterable {} from module {}".format(usereffect, f)
-        raise
-    return machine
+    pdata = _compile_forest(tree)[-1]
+    # source data
+    modfile, _, modname = shlex.split(pdata[0])
+    entrypoint = get_module_entrypoint(modfile)
+    ds["source"] = (modname, entrypoint)
+    # transform data
+    for ind, cmd in enumerate(pdata[1:]):
+        modfile, _, modname = shlex.split(cmd)
+        entrypoint = get_module_entrypoint(os.path.join(project_path, modfile))
+        ds["f{}".format(ind)] = (modname, entrypoint)
+    return ds
