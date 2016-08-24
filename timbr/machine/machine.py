@@ -20,7 +20,7 @@ from bson.objectid import ObjectId
 from collections import deque
 from observed import event
 import warnings
-import sys, traceback
+import os, sys, traceback
 
 
 class MachineConsumer(StoppableThread):
@@ -135,6 +135,10 @@ class Machine(BaseMachine):
     def start_source(self):
         if self.source is not None:
             self.source.start()
+
+    def stop_source(self):
+        self.source.stop()
+        self.source.join(timeout=1.0)
     
     @property
     def running(self):
@@ -168,3 +172,30 @@ class Machine(BaseMachine):
                 else:
                     output.append(self.serialize_fn(formatter(UpstreamError(fn_s))))
         return output 
+
+    @classmethod
+    def machine_from_json(cls, config_path=None, **kwargs):
+        if config_path is None:
+            config_path = os.path.join(os.getcwd(), "machine.json")
+        with open(config_path, "r") as f:
+            config = json.load(f)
+        _module_path = config["_module_path"]
+        sys.path.append(_module_path)
+        import _machine_
+        machine = cls(**kwargs)
+        if config.get("source") is not None:
+            _source = getattr(_machine_, "_source")
+            machine.set_source(_source())
+        for ind in range(len(config["transforms"])):
+            f = getattr(_machine_, "_f{}".format(ind))
+            machine[ind] = f            
+        machine._config = config
+        return machine
+
+
+
+
+
+
+
+
