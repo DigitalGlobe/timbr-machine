@@ -3,17 +3,18 @@ from collections import OrderedDict, namedtuple
 import yaml
 import os
 import shlex
+import json
 
 
-machine_effect = namedtuple("MachineEffect", ["module", "entrypoint", "name"])
+machine_effect = namedtuple("MachineEffect", ["module", "effect", "name"])
 
-class TwolaCompatibilityStructure(object):
+class TwolaProjectStore(object):
     def __init__(self, project_path):
         self.project_path = project_path
         with open(os.path.join(project_path, "topology.yaml")) as f:
             tree = yaml.load(f)
         self._data = self._compile_forest(tree)[-1]
-        self.twola = self._twola()        
+        self._twola = self._twola_store()        
 
     def _compile_forest(self, x, stk=[]):
         nodes = []
@@ -35,7 +36,7 @@ class TwolaCompatibilityStructure(object):
         return nodes
 
     @staticmethod
-    def _get_module_entrypoint(modfile):
+    def _get_module_effect(modfile):
         assert(os.path.exists(modfile))
         with open(modfile) as f:
             f.readline()
@@ -45,25 +46,36 @@ class TwolaCompatibilityStructure(object):
 
     @property
     def init_template(self):
-        lines = ["from {" + str(i) + ".module} import {" + str(i) + ".entrypoint}" for i in range(len(self.twola))]
+        lines = ["from {0.module} import {0.effect} as _source"]
+        lines.extend(["from {" + str(i + 1) + ".module} import {" + str(i + 1) + ".effect} as _f" + str(i) for i in range(len(self._twola) - 1)])
         return "\n".join(lines)
 
-    def _twola(self):
+    def _twola_store(self):
         ds = []
         for cmd in self._data:
             modfile, _, modname = shlex.split(cmd)
-            entrypoint = self._get_module_entrypoint(modfile)
-            ds.append(machine_effect(modname, entrypoint, modname))
+            effect = self._get_module_effect(modfile)
+            ds.append(machine_effect(modname, effect, modname))
         return ds
 
     def machine_init(self):
         s = self.init_template
-        return s.format(*self.twola)
+        return s.format(*self._twola)
  
     def machine_config(self):
-        s = {}
-        s["source"] = self.twola[0]._asdict()
-        s["transforms"] = {}
-        for ind, fn in enumerate(self.twola[1:]):
-            s["transforms"]["f{}".format(ind)] = fn._asdict()
+        s = {"_module_path": self.project_path}
+        s["source"] = self._twola[0]._asdict()
+        s["transforms"] = []
+        for fn in self._twola[1:]:
+            s["transforms"].append(fn._asdict())
         return s
+
+def configure_twola_project(project_path=None):
+    if project_path is None:
+        project_path = os.getcwd()
+    tps = TwolaProjectStore(project_path)
+    with open(os.path.join(project_path, "_machine_.py"), "w") as f:
+        f.write(tps.machine_init())
+    with open(os.path.join(project_path, "machine.json"), "w") as f:
+        json.dump(tps.machine_config(), f)
+
