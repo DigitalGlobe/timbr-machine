@@ -41,19 +41,20 @@ def init_template(nfuncs):
     lines.extend(["from {" + str(i + 1) + ".modname} import {" + str(i + 1) + ".effect} as _f" + str(i) for i in range(nfuncs)])
     return "\n".join(lines)
 
-def topology_to_data(yaml_path):
-    with open(path) as f:
-        tree = yaml_path.load(f)
+def topology_to_data(path):
+    with open(os.path.join(path, "topology.yaml")) as f:
+        tree = yaml.load(f)
     _data = _compile_forest(tree)[-1]
     ds = []
     for cmd in _data:
         modfile, _, modname = shlex.split(cmd)
-        effect = _get_module_effect(modfile)
-        ds.append(machine_effect(modfile, modname, effect))
+        effect = _get_module_effect(os.path.join(path, modfile))
+        ds.append(twola_module(modfile, modname, effect))
     return ds
 
-def machine_config(init_path, twola):
-    ds = {"machine_init_path": init_path}
+def machine_config(path, twola):
+    package_path, package_name = os.path.split(path)
+    ds = {"config_package": {"path": package_path, "name": package_name}}
     ds["source"] = twola[0]._asdict()
     ds["transforms"] = []
     for fn in twola[1:]:
@@ -62,7 +63,7 @@ def machine_config(init_path, twola):
 
 def convert_twola_project(project_path, target_path=None):
     assert os.path.isdir(project_path)
-    twola = yaml_to_data(os.path.join(project_path, "topology.yaml"))
+    twola = topology_to_data(project_path)
     if target_path is None:
         target_path = project_path
     else:
@@ -75,6 +76,6 @@ def convert_twola_project(project_path, target_path=None):
     with open(os.path.join(target_path, "__init__.py"), "w") as f:
         f.write(formatted)
     # write machine datastructure
-    ds = machine_config(os.path.join(target_path, "__init__.py"), twola)
+    ds = machine_config(target_path, twola)
     with open(os.path.join(target_path, "machine.json"), "w") as f:
-        json.dump(ds)
+        json.dump(ds, f)
