@@ -21,6 +21,7 @@ from collections import deque
 from observed import event
 import warnings
 import os, sys, traceback
+import imp
 
 
 class MachineConsumer(StoppableThread):
@@ -174,20 +175,19 @@ class Machine(BaseMachine):
         return output 
 
     @classmethod
-    def machine_from_json(cls, config_path=None, **kwargs):
-        if config_path is None:
-            config_path = os.path.join(os.getcwd(), "machine.json")
+    def from_json(cls, config_path, **kwargs):
         with open(config_path, "r") as f:
             config = json.load(f)
-        _module_path = config["_module_path"]
-        sys.path.append(_module_path)
-        import _machine_
+        ppath = config["config_package"]["path"]
+        pname = config["config_package"]["name"]
+        f, filename, desc = imp.find_module(pname, [ppath])
+        _machine_mod = imp.load_module(pname, f, filename, desc)
         machine = cls(**kwargs)
         if config.get("source") is not None:
-            _source = getattr(_machine_, "_source")
+            _source = getattr(_machine_mod, "_source")
             machine.set_source(_source())
         for ind in range(len(config["transforms"])):
-            f = getattr(_machine_, "_f{}".format(ind))
+            f = getattr(_machine_mod, "_f{}".format(ind))
             machine[ind] = f            
         machine._config = config
         return machine
