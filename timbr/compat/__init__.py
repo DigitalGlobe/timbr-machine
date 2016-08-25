@@ -1,1 +1,0 @@
-from timbr.compat.twola import convert_twola_project
