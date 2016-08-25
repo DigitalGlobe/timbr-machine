@@ -15,13 +15,12 @@ import zmq
 from .base_machine import BaseMachine
 from .profiler import MachineProfiler
 from .exception import UpstreamError
-from .util import StoppableThread, mkdir_p, json_serializable_exception
+from .util import StoppableThread, mkdir_p, json_serializable_exception, identity
 from bson.objectid import ObjectId
 from collections import deque
 from observed import event
 import warnings
-import os, sys, traceback
-import imp
+import os, sys, traceback, imp
 
 
 class MachineConsumer(StoppableThread):
@@ -74,9 +73,9 @@ class MachineConsumer(StoppableThread):
                     raise
 
 class SourceConsumer(StoppableThread):
-    def __init__(self, machine, generator):
+    def __init__(self, machine, iterable):
         super(SourceConsumer, self).__init__()
-        self.g = generator
+        self.g = iterable
         self.machine = machine
         self._error = {}
         self._status = {}
@@ -112,7 +111,7 @@ class Machine(BaseMachine):
         self._error_prev = deque(maxlen=10)
         self._profiler = MachineProfiler()
         self._debug = debug
-        self.source = None
+        self._source_thread = None
 
     @event
     def start(self):
@@ -120,6 +119,8 @@ class Machine(BaseMachine):
             self._profiler.register()
             self._consumer_thread = MachineConsumer(self)
             self._consumer_thread.start()
+        if self._source_thread is not None and not self._source_thread.is_alive():
+            self._source_thread.start()
 
     @event
     def stop(self):
@@ -129,17 +130,28 @@ class Machine(BaseMachine):
             self._profiler.unregister()
         except KeyError as ke:
             pass
+        if self._source_thread is not None:
+            self._source_thread.stop()
+            self._source_thread.join(timeout=1.0)
 
-    def set_source(self, source_generator):
-        self.source = SourceConsumer(self, source_generator)
-        
-    def start_source(self):
-        if self.source is not None:
-            self.source.start()
+    @property
+    def source(self):
+        if self._source_thread is not None:
+            return self._source_thread.g
 
-    def stop_source(self):
-        self.source.stop()
-        self.source.join(timeout=1.0)
+    @source.setter
+    def source(self, iterable):
+        if self._source_thread is not None:
+            warnings.warn("Delete existing source before reassigning")
+            return
+        self._source_thread = SourceConsumer(self, iterable)
+
+    @source.deleter
+    def source(self):
+        if self._source_thread is not None:
+            self._source_thread.stop()
+            self._source_thread.join(timeout=1.0)
+        self._source_thread = None
     
     @property
     def running(self):
@@ -172,30 +184,42 @@ class Machine(BaseMachine):
                     output.append(self.serialize_fn(formatter(e, task=errored_task)))
                 else:
                     output.append(self.serialize_fn(formatter(UpstreamError(fn_s))))
-        return output 
+        return output
 
     @classmethod
     def from_json(cls, config_path, **kwargs):
         with open(config_path, "r") as f:
             config = json.load(f)
-        ppath = config["config_package"]["path"]
-        pname = config["config_package"]["name"]
-        f, filename, desc = imp.find_module(pname, [ppath])
-        _machine_mod = imp.load_module(pname, f, filename, desc)
+
+        main = sys.modules['__main__']
+
+        if config.get("init") is not None:
+            init_path = config["init"]
+            pkg_path, init = os.path.split(init_path)
+        
+            sys.path.append(pkg_path)
+            _mod = imp.load_source("_machine_mod", init_path) 
+            sys.path.pop()
+
+            exclude = set(['__builtins__', '__doc__', '__file__', '__name__', '__package__',])
+            for mod in set(dir(_mod)).difference(exclude):
+                m = getattr(_mod, mod)
+                setattr(main, mod, m)
+
         machine = cls(**kwargs)
-        if config.get("source") is not None:
-            _source = getattr(_machine_mod, "_source")
-            machine.set_source(_source())
-        for ind in range(len(config["transforms"])):
-            f = getattr(_machine_mod, "_f{}".format(ind))
-            machine[ind] = f            
+        assert(machine.stages >= len(config["functions"]))
+
+        for i in range(len(config["functions"])):
+            f = getattr(main, config["functions"][i][0])
+            if f is not None and callable(f):
+                machine[i] = f
+
+        _source = getattr(main, config["source"][0])
+        if callable(_source):
+            _source = _source()
+        try:
+            machine.source = iter(_source)
+        except TypeError as te:
+            pass
         machine._config = config
         return machine
-
-
-
-
-
-
-
-
