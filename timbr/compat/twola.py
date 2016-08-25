@@ -6,6 +6,7 @@ import shlex
 import json
 import shutil
 
+from .util import copytree
 
 twola_module = namedtuple("TwolaModule", ["modfile", "modname", "effect"])
 
@@ -37,8 +38,8 @@ def _get_module_effect(modfile):
     return args[3].strip("()")
 
 def init_template(nfuncs):
-    lines = ["from {0.modname} import {0.effect} as _source"]
-    lines.extend(["from {" + str(i + 1) + ".modname} import {" + str(i + 1) + ".effect} as _f" + str(i) for i in range(nfuncs)])
+    lines = ["from {0.modname} import {0.effect} as source"]
+    lines.extend(["from {" + str(i + 1) + ".modname} import {" + str(i + 1) + ".effect} as f" + str(i) for i in range(nfuncs)])
     return "\n".join(lines)
 
 def topology_to_data(path):
@@ -54,21 +55,22 @@ def topology_to_data(path):
 
 def machine_config(path, twola):
     package_path, package_name = os.path.split(path)
-    ds = {"config_package": {"path": package_path, "name": package_name}}
-    ds["source"] = twola[0]._asdict()
-    ds["transforms"] = []
-    for fn in twola[1:]:
-        ds["transforms"].append(fn._asdict())
+    ds = {"init": os.path.join(path, "__init__.py")}
+    ds["source"] = ("source", {"name": twola[0].effect})
+    ds["functions"] = []
+    for ind, fn in enumerate(twola[1:]):
+        ds["functions"].append(("f{}".format(ind), {"name": fn.effect}))
     return ds
 
-def convert_twola_project(project_path, target_path=None):
+def convert_project(project_path, target_path=None):
     assert os.path.isdir(project_path)
     twola = topology_to_data(project_path)
-    if target_path is None:
+    if target_path is None or target_path == project_path:
         target_path = project_path
     else:
-        for mod in twola:
-            shutil.copy(os.path.join(project_path, mod.modfile), target_path)    
+        if not os.path.isdir(target_path):
+            os.mkdirs(target_path)
+        copytree(project_path, target_path)  
     # copy files 
     #write __init__.py
     init = init_template(len(twola) - 1)
