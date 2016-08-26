@@ -210,8 +210,7 @@ class Machine(BaseMachine):
                 setattr(main, mod, m)
 
         machine = cls(stages=8, **kwargs)
-        assert(machine.stages >= len(config["functions"]))
-
+        
         for i in range(len(config["functions"])):
             if config["functions"][i] is not None:
                 if config["functions"][i][0] is not None:
