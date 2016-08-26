@@ -209,8 +209,9 @@ class Machine(BaseMachine):
                 m = getattr(_mod, mod)
                 setattr(main, mod, m)
 
-        machine = cls(stages=8, **kwargs)
-        
+        _stages = max(8, len(config["functions"]))
+        machine = cls(stages=_stages, **kwargs)
+
         for i in range(len(config["functions"])):
             if config["functions"][i] is not None:
                 if config["functions"][i][0] is not None:
