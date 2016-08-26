@@ -210,8 +210,8 @@ class Machine(BaseMachine):
         assert(machine.stages >= len(config["functions"]))
 
         for i in range(len(config["functions"])):
-            f = getattr(main, config["functions"][i][0])
-            if f is not None and callable(f):
+            if config["functions"][i][0] is not None:
+                f = getattr(main, config["functions"][i][0])
                 machine[i] = f
 
         _source = getattr(main, config["source"][0])
