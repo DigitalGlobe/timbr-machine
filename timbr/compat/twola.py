@@ -7,8 +7,9 @@ import json
 import shutil
 
 from .util import copytree
+from timbr.machine.util import mkdir_p
 
-twola_module = namedtuple("TwolaModule", ["modfile", "modname", "effect"])
+TwolaModule = namedtuple("TwolaModule", ["modfile", "modname", "effect"])
 
 def _compile_forest(x, stk=[]):
     nodes = []
@@ -50,7 +51,7 @@ def topology_to_data(path):
     for cmd in _data:
         modfile, _, modname = shlex.split(cmd)
         effect = _get_module_effect(os.path.join(path, modfile))
-        ds.append(twola_module(modfile, modname, effect))
+        ds.append(TwolaModule(modfile, modname, effect))
     return ds
 
 def machine_config(path, twola):
@@ -69,7 +70,7 @@ def convert_project(project_path, target_path=None):
         target_path = project_path
     else:
         if not os.path.isdir(target_path):
-            os.mkdirs(target_path)
+            mkdir_p(target_path)
         copytree(project_path, target_path)  
     # copy files 
     #write __init__.py
