@@ -20,7 +20,10 @@ from bson.objectid import ObjectId
 from collections import deque
 from observed import event
 import warnings
-import os, sys, traceback, imp
+import os
+import sys 
+import traceback
+import imp
 
 
 class MachineConsumer(StoppableThread):
@@ -206,20 +209,18 @@ class Machine(BaseMachine):
                 m = getattr(_mod, mod)
                 setattr(main, mod, m)
 
-        machine = cls(**kwargs)
+        machine = cls(stages=8, **kwargs)
         assert(machine.stages >= len(config["functions"]))
 
         for i in range(len(config["functions"])):
-            if config["functions"][i][0] is not None:
-                f = getattr(main, config["functions"][i][0])
-                machine[i] = f
+            if config["functions"][i] is not None:
+                if config["functions"][i][0] is not None:
+                    f = getattr(main, config["functions"][i][0])
+                    machine[i] = f
 
         _source = getattr(main, config["source"][0])
         if callable(_source):
             _source = _source()
-        try:
-            machine.source = iter(_source)
-        except TypeError as te:
-            pass
+        machine.source = iter(_source)
         machine._config = config
         return machine
