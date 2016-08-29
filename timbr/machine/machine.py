@@ -190,13 +190,13 @@ class Machine(BaseMachine):
         return output
 
     @classmethod
-    def from_json(cls, config_path, **kwargs):
+    def from_json(cls, config_path, init_path=None, **kwargs):
         with open(config_path, "r") as f:
             config = json.load(f)
 
         main = sys.modules['__main__']
 
-        if config.get("init") is not None:
+        def load_machine(init_path):
             init_path = config["init"]
             pkg_path, init = os.path.split(init_path)
         
@@ -208,7 +208,12 @@ class Machine(BaseMachine):
             for mod in set(dir(_mod)).difference(exclude):
                 m = getattr(_mod, mod)
                 setattr(main, mod, m)
-
+        
+        if init_path is not None:
+            load_machine(init_path)
+        elif config.get("init") is not None:
+            load_machine(config["init"])
+            
         _stages = max(8, len(config["functions"]))
         machine = cls(stages=_stages, **kwargs)
 
