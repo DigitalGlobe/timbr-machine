@@ -197,7 +197,6 @@ class Machine(BaseMachine):
         main = sys.modules['__main__']
 
         def load_machine(init_path):
-            init_path = config["init"]
             pkg_path, init = os.path.split(init_path)
         
             sys.path.append(pkg_path)
