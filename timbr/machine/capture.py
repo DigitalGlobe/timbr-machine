@@ -9,7 +9,7 @@ import os
 from collections import defaultdict
 import tables
 
-from kernel.{}.datastore.hdf5 import UnstructuredStore
+from twola.datastore import UnstructuredStore
 import timbr.serializer as serializer
 
 from txzmq import ZmqEndpoint, ZmqFactory, ZmqSubConnection
@@ -37,21 +37,16 @@ def _map_message(message):
 class CaptureConnection(ZmqSubConnection):
     def __init__(self, factory, endpoint, callback):
         self._endpoint = endpoint
-        self._oid_pattern = oid_pattern
         self._callback = callback
         ZmqSubConnection.__init__(self, factory, ZmqEndpoint('connect', endpoint))
         self.subscribe("")
 
     def gotMessage(self, message, header):
         self._callback(message, header)
-        mapped = _map_message(serializer.loads(message))
-        
-        for key in self._subscriptions:
-
 
 
 class WampCaptureComponent(ApplicationSession):
-    def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="captures/.capture", 
+    def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="machine/data/.capture", 
                     base_endpoint="ipc:///tmp/timbr-machine/", tracks=8, oid_pattern=r'[0-9a-fA-F]+$'):
         ApplicationSession.__init__(self, config=config)
         self._kernel_key = kernel_key
@@ -62,8 +57,9 @@ class WampCaptureComponent(ApplicationSession):
         self._auto_flusher = LoopingCall(self._flush)
         self._auto_flusher.start(10.0) # Should make this interval value configurable
         self._oid_pattern = oid_pattern
-        self._conn = CaptureConnection(ZmqFactory(), os.path.join(base_endpoint, kernel_key), self._datastore)
         self._configure(tracks)
+        self._factory = ZmqFactory()
+        self._conn = CaptureConnection(self._factory, os.path.join(base_endpoint, kernel_key), self._datastore, self.capture)
 
     def _configure(self, tracks):
         if len(self._datastore.captures) > 0:
@@ -109,14 +105,17 @@ class WampCaptureComponent(ApplicationSession):
             assert re.match("[_A-Za-z][_a-zA-Z0-9]*", key)
             assert not keyword.iskeyword(key)
 
-            if key in self._subscriptions and self._subscriptions[key]:
-                return False
-            elif key in self._subscriptions and not self._subscriptions[key]:
-                return True
+            if key in self._subscriptions:
+                if self._subscriptions[key]:
+                    return False
+                else:
+                    self._subscriptions[key] = True
+                    return True
             else:
                 self._datastore.create(key)
                 self._subscriptions[key] = True
                 return True
+
 
         log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.subscribe".format(self._kernel_key))
         yield self.register(subscribe, 'io.timbr.kernel.{}.captures.subscribe'.format(self._kernel_key))
@@ -130,7 +129,7 @@ class WampCaptureComponent(ApplicationSession):
         yield self.register(unsubscribe, 'io.timbr.kernel.{}.captures.unsubscribe'.format(self._kernel_key))
 
         def flag_endpoint(endpoint):
-            dirty_keys = [key for key in self._subscriptions if self._subscriptions[key]._endpoint == endpoint]
+            dirty_keys = [key for key in self._subscriptions if self._conn._endpoint == endpoint]
             for key in dirty_keys:
                 self._datastore.checkpoint(key)
             if(len(dirty_keys) > 0):
@@ -145,7 +144,7 @@ class WampCaptureComponent(ApplicationSession):
         def captures():
             output = []
             for key in self._datastore.captures:
-                rec = {"key": key, "active": key in self._subscriptions}
+                rec = {"key": key, "active": self._subscriptions[key]}
                 rec["segments"] = []
                 for segment in self._datastore.segments(key):
                     preview_item = yield preview(key, segment=segment)
@@ -274,3 +273,6 @@ def main():
     _capture_runner.run(WampCaptureComponent, start_reactor=False)
 
     reactor.run()
+
+if __name__ == "__main__":
+
