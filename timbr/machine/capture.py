@@ -9,7 +9,7 @@ import os
 from collections import defaultdict
 import tables
 
-from twola.datastore.hdf5 import UnstructuredStore
+from kernel.{}.datastore.hdf5 import UnstructuredStore
 import timbr.serializer as serializer
 
 from txzmq import ZmqEndpoint, ZmqFactory, ZmqSubConnection
@@ -25,24 +25,37 @@ from autobahn.twisted.util import sleep
 
 _capture_runner = None
 
+def _map_message(message):
+    d = {}
+    for i, msg in enumerate(message):
+        if i == 0:
+            d["source"] = msg
+        else:
+            d["f{}".format(i)] = msg
+    return d
 
 class CaptureConnection(ZmqSubConnection):
-    def __init__(self, factory, endpoint, datastore, key="default", oid_pattern=r'[0-9a-fA-F]+$'):
+    def __init__(self, component, factory, endpoint, datastore, oid_pattern=r'[0-9a-fA-F]+$'):
+        self._component = component
         self._endpoint = endpoint
-        self._key = key
         self._datastore = datastore
         self._oid_pattern = oid_pattern
         ZmqSubConnection.__init__(self, factory, ZmqEndpoint('connect', endpoint))
         self.subscribe("")
 
     def gotMessage(self, message, header):
+        mapped = _map_message(serializer.loads(message))
         oid = re.findall(self._oid_pattern, header)[0]
-        self._datastore.append(self._key, "%s%s" % (serializer.dumps(header), message), oid)
+        for key in self._component._subscriptions:
+            payload = "%s%s" % (serializer.dumps(header), mapped[key])
+            self._datastore.append(key, payload, oid)
 
 
 class WampCaptureComponent(ApplicationSession):
-    def __init__(self, config=ComponentConfig(realm=u"twola"), basename="/twola-data/data/.capture"):
+    def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="/Users/jamiepolackwich1/Timbr/testing-notebooks/machine-captures/.capture",
+                    base_endpoint="ipc:///tmp/timbr-machine/"):
         ApplicationSession.__init__(self, config=config)
+        self._kernel_key = kernel_key
         self._subscriptions = {}
         self._basename = basename
         self._datastore = UnstructuredStore(self._basename)
@@ -50,6 +63,8 @@ class WampCaptureComponent(ApplicationSession):
         self._factory = ZmqFactory()
         self._auto_flusher = LoopingCall(self._flush)
         self._auto_flusher.start(10.0) # Should make this interval value configurable
+        self._endpoint = os.path.join(base_endpoint, kernel_key)
+        self._capture_conn = CaptureConnection()
 
     def _flush(self):
         try:
@@ -64,10 +79,10 @@ class WampCaptureComponent(ApplicationSession):
         def subscriptions():
             return self._subscriptions.keys()
 
-        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.twola.captures.subscriptions")
-        yield self.register(subscriptions, 'io.timbr.twola.captures.subscriptions')
+        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.subscriptions".format(self._kernel_key))
+        yield self.register(subscriptions, 'io.timbr.kernel.{}.captures.subscriptions'.format(self._kernel_key))
 
-        def subscribe(endpoint, key, structure_level=0):
+        def subscribe(key, structure_level=0):
             assert re.match("[_A-Za-z][_a-zA-Z0-9]*", key)
             assert not keyword.iskeyword(key)
 
@@ -75,11 +90,11 @@ class WampCaptureComponent(ApplicationSession):
                 return False
             else:
                 self._datastore.create(key)
-                self._subscriptions[key] = -(self._factory, endpoint, key, self._datastore)
+                self._subscriptions[key] = CaptureConnection(self._factory, self._endpoint, key, self._datastore)
                 return True
 
-        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.twola.captures.subscribe")
-        yield self.register(subscribe, 'io.timbr.twola.captures.subscribe')
+        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.subscribe".format(self._kernel_key))
+        yield self.register(subscribe, 'io.timbr.kernel.{}.captures.subscribe'.format(self._kernel_key))
 
         def unsubscribe(key):
             if(key in self._subscriptions):
@@ -87,8 +102,8 @@ class WampCaptureComponent(ApplicationSession):
                 self._datastore.checkpoint(key)
                 del self._subscriptions[key]
 
-        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.twola.captures.unsubscribe")
-        yield self.register(unsubscribe, 'io.timbr.twola.captures.unsubscribe')
+        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.unsubscribe".format(self._kernel_key))
+        yield self.register(unsubscribe, 'io.timbr.kernel.{}.captures.unsubscribe'.format(self._kernel_key))
 
         def flag_endpoint(endpoint):
             dirty_keys = [key for key in self._subscriptions if self._subscriptions[key]._endpoint == endpoint]
@@ -99,8 +114,8 @@ class WampCaptureComponent(ApplicationSession):
             else:
                 return False
 
-        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.twola.captures.flag_endpoint")
-        yield self.register(flag_endpoint, 'io.timbr.twola.captures.flag_endpoint')
+        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.flag_endpoint".format(self._kernel_key))
+        yield self.register(flag_endpoint, 'io.timbr.kernel.{}.captures.flag_endpoint'.format(self._kernel_key))
 
         @inlineCallbacks
         def captures():
@@ -115,8 +130,8 @@ class WampCaptureComponent(ApplicationSession):
                 output.append(rec)
             returnValue(output)
 
-        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.twola.captures.captures")
-        yield self.register(captures, 'io.timbr.twola.captures.captures')
+        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.captures".format(self._kernel_key))
+        yield self.register(captures, 'io.timbr.kernel.{}.captures.captures'.format(self._kernel_key))
 
         @inlineCallbacks
         def preview(key, count=5, segment='current'):
@@ -128,8 +143,8 @@ class WampCaptureComponent(ApplicationSession):
             result = yield self._iterlocks[key].run(critical)
             returnValue(result)
 
-        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.twola.captures.preview")
-        yield self.register(preview, 'io.timbr.twola.captures.preview')
+        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.preview".format(self._kernel_key))
+        yield self.register(preview, 'io.timbr.kernel.{}.captures.preview'.format(self._kernel_key))
 
         @inlineCallbacks
         def counter(key, details=None):
@@ -143,8 +158,8 @@ class WampCaptureComponent(ApplicationSession):
                 yield sleep(0.5)
             returnValue(None)
 
-        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.twola.captures.counter")
-        yield self.register(counter, 'io.timbr.twola.captures.counter', RegisterOptions(details_arg='details'))
+        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.counter".format(self._kernel_key))
+        yield self.register(counter, 'io.timbr.kernel.{}.captures.counter'.format(self._kernel_key), RegisterOptions(details_arg='details'))
 
         @inlineCallbacks
         def stream(key, details=None):
@@ -157,8 +172,8 @@ class WampCaptureComponent(ApplicationSession):
             yield self._iterlocks[key].run(cooperate(critical()).whenDone())
             returnValue(None)
 
-        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.twola.captures.stream")
-        yield self.register(stream, 'io.timbr.twola.captures.stream', RegisterOptions(details_arg='details'))
+        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.stream".format(self._kernel_key))
+        yield self.register(stream, 'io.timbr.kernel.{}.captures.stream'.format(self._kernel_key), RegisterOptions(details_arg='details'))
 
         @inlineCallbacks
         def raw_stream(key, details=None):
@@ -171,8 +186,8 @@ class WampCaptureComponent(ApplicationSession):
             yield self._iterlocks[key].run(cooperate(critical()).whenDone())
             returnValue(None)
 
-        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.twola.captures.raw_stream")
-        yield self.register(raw_stream, 'io.timbr.twola.captures.raw_stream', RegisterOptions(details_arg='details'))
+        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.raw_stream".format(self._kernel_key))
+        yield self.register(raw_stream, 'io.timbr.kernel.{}.captures.raw_stream'.format(self._kernel_key), RegisterOptions(details_arg='details'))
 
         @inlineCallbacks
         def snapshot(key, snapfile, segments, details=None):
@@ -197,8 +212,8 @@ class WampCaptureComponent(ApplicationSession):
             yield self._iterlocks[key].run(critical)
 
 
-        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.twola.captures.snapshot")
-        yield self.register(snapshot, 'io.timbr.twola.captures.snapshot', RegisterOptions(details_arg='details'))
+    log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.snapshot".format(self._kernel_key))
+    yield self.register(snapshot, 'io.timbr.kernel.{}.captures.snapshot'.format(self._kernel_key), RegisterOptions(details_arg='details'))
 
     def onLeave(self, details):
         self._flush()
@@ -216,21 +231,21 @@ def main():
     log.startLogging(sys.stdout)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-b", "--bind", default="ipc:///tmp/twola-captd")
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
-    parser.add_argument("-r", "--realm", default="twola", help="Router realm")
-    parser.add_argument("-c", "--connect", default=u"127.0.0.1", help="Router host address")
-    parser.add_argument("-p", "--port", default=9000, type=int, help="Router port")
+    # NOTE: all of these are placeholders
+    parser.add_argument("--wamp-realm", default=u"jupyter", help='Router realm')
+    parser.add_argument("--wamp-url", default=u"ws://127.0.0.1:8123", help="WAMP Websocket URL")
+    parser.add_argument("--token", type=unicode, help="OAuth token to connect to router")
     args = parser.parse_args()
 
-    _capture_runner = ApplicationRunner(url=u"ws://{}:{}".format(args.connect, args.port),
-                                        realm=unicode(args.realm),
-                                        debug=args.debug,
-                                        debug_wamp=args.debug,
-                                        debug_app=args.debug)
+    _capture_runner = ApplicationRunner(url=unicode(args.wamp_url), realm=unicode(args.wamp_realm),
+                                        debug=args.debug, 
+                                        headers={"Authorization": "Bearer {}".format(args.token),
+                                                    "X-Kernel-ID": client.session.key})
 
-    log.msg("Connecting to router: ws://%s:%i" % (args.connect, args.port))
-    log.msg("  Project Realm: %s" % (args.realm))
+
+    log.msg("Connecting to router: %s" % args.wamp_url)
+    log.msg("  Project Realm: %s" % (args.wamp_realm))
 
     _capture_runner.run(WampCaptureComponent, start_reactor=False)
 
