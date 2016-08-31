@@ -35,42 +35,65 @@ def _map_message(message):
     return d
 
 class CaptureConnection(ZmqSubConnection):
-    def __init__(self, component, factory, endpoint, datastore, oid_pattern=r'[0-9a-fA-F]+$'):
-        self._component = component
+    def __init__(self, factory, endpoint, callback):
         self._endpoint = endpoint
-        self._datastore = datastore
         self._oid_pattern = oid_pattern
+        self._callback = callback
         ZmqSubConnection.__init__(self, factory, ZmqEndpoint('connect', endpoint))
         self.subscribe("")
 
     def gotMessage(self, message, header):
+        self._callback(message, header)
         mapped = _map_message(serializer.loads(message))
-        oid = re.findall(self._oid_pattern, header)[0]
-        for key in self._component._subscriptions:
-            payload = "%s%s" % (serializer.dumps(header), mapped[key])
-            self._datastore.append(key, payload, oid)
+        
+        for key in self._subscriptions:
+
 
 
 class WampCaptureComponent(ApplicationSession):
-    def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="/Users/jamiepolackwich1/Timbr/testing-notebooks/machine-captures/.capture",
-                    base_endpoint="ipc:///tmp/timbr-machine/"):
+    def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="captures/.capture", 
+                    base_endpoint="ipc:///tmp/timbr-machine/", tracks=8, oid_pattern=r'[0-9a-fA-F]+$'):
         ApplicationSession.__init__(self, config=config)
         self._kernel_key = kernel_key
         self._subscriptions = {}
         self._basename = basename
         self._datastore = UnstructuredStore(self._basename)
         self._iterlocks = defaultdict(DeferredLock)
-        self._factory = ZmqFactory()
         self._auto_flusher = LoopingCall(self._flush)
         self._auto_flusher.start(10.0) # Should make this interval value configurable
-        self._endpoint = os.path.join(base_endpoint, kernel_key)
-        self._capture_conn = CaptureConnection()
+        self._oid_pattern = oid_pattern
+        self._conn = CaptureConnection(ZmqFactory(), os.path.join(base_endpoint, kernel_key), self._datastore)
+        self._configure(tracks)
+
+    def _configure(self, tracks):
+        if len(self._datastore.captures) > 0:
+            self._subscriptions = {key: False for key in self._datastore.captures}
+        else:
+            self._subscriptions = {"f{}".format(i): False for i in range(tracks)}
+            self._subscriptions["source"] = False
+            map(self._datastore.create, self._subscriptions.keys())
 
     def _flush(self):
         try:
             self._datastore.flush()
         except Exception, e:
             log.msg("Exception caught in _auto_flush: %s" % str(e))
+
+    def _capturing(self):
+        return any(self._subscriptions.values())
+
+    def capture(self, msg, hdr):
+        if self._capturing():
+            oid = re.findall(self._oid_pattern, hdr)[0]
+            mapped = _map_message(serializer.loads(msg))
+            for key in self._subscriptions:
+                if self._subscriptions[key]:
+                    value = mapped.get(key)
+                else:
+                    value = None
+                
+                payload = "%s%s" % (serializer.dumps(header), value)
+                self._datastore.append(key, payload, oid)
 
     @inlineCallbacks
     def onJoin(self, details):
@@ -86,21 +109,22 @@ class WampCaptureComponent(ApplicationSession):
             assert re.match("[_A-Za-z][_a-zA-Z0-9]*", key)
             assert not keyword.iskeyword(key)
 
-            if key in self._subscriptions:
+            if key in self._subscriptions and self._subscriptions[key]:
                 return False
+            elif key in self._subscriptions and not self._subscriptions[key]:
+                return True
             else:
                 self._datastore.create(key)
-                self._subscriptions[key] = CaptureConnection(self._factory, self._endpoint, key, self._datastore)
+                self._subscriptions[key] = True
                 return True
 
         log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.subscribe".format(self._kernel_key))
         yield self.register(subscribe, 'io.timbr.kernel.{}.captures.subscribe'.format(self._kernel_key))
 
         def unsubscribe(key):
-            if(key in self._subscriptions):
-                self._subscriptions[key].shutdown()
+            if key in self._subscriptions and self._subscriptions[key]:
                 self._datastore.checkpoint(key)
-                del self._subscriptions[key]
+                self._subscriptions[key] = False
 
         log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.unsubscribe".format(self._kernel_key))
         yield self.register(unsubscribe, 'io.timbr.kernel.{}.captures.unsubscribe'.format(self._kernel_key))
