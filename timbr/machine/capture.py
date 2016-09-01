@@ -35,14 +35,30 @@ def _map_message(message):
     return d
 
 class CaptureConnection(ZmqSubConnection):
-    def __init__(self, factory, endpoint, callback):
+    def __init__(self, factory, endpoint, subscriptions):
         self._endpoint = endpoint
-        self._callback = callback
+        self._subscriptions = subscriptions
         ZmqSubConnection.__init__(self, factory, ZmqEndpoint('connect', endpoint))
         self.subscribe("")
 
     def gotMessage(self, message, header):
-        self._callback(message, header)
+        self._capture(message, header)
+
+    def _capturing(self):
+        return any(self._subscriptions.values())
+
+    def _capture(self, msg, hdr):
+        if self._capturing():
+            oid = re.findall(self._oid_pattern, hdr)[0]
+            mapped = _map_message(serializer.loads(msg))
+            for key in self._subscriptions:
+                if self._subscriptions[key]:
+                    value = mapped.get(key)
+                else:
+                    value = None
+                
+                payload = "%s%s" % (serializer.dumps(header), value)
+                self._datastore.append(key, payload, oid)
 
 
 class WampCaptureComponent(ApplicationSession):
@@ -59,7 +75,7 @@ class WampCaptureComponent(ApplicationSession):
         self._oid_pattern = oid_pattern
         self._configure(tracks)
         self._factory = ZmqFactory()
-        self._conn = CaptureConnection(self._factory, os.path.join(base_endpoint, kernel_key), self._datastore, self.capture)
+        self._conn = CaptureConnection(self._factory, os.path.join(base_endpoint, kernel_key), self._datastore, self._subscriptions)
 
     def _configure(self, tracks):
         if len(self._datastore.captures) > 0:
@@ -75,21 +91,7 @@ class WampCaptureComponent(ApplicationSession):
         except Exception, e:
             log.msg("Exception caught in _auto_flush: %s" % str(e))
 
-    def _capturing(self):
-        return any(self._subscriptions.values())
 
-    def capture(self, msg, hdr):
-        if self._capturing():
-            oid = re.findall(self._oid_pattern, hdr)[0]
-            mapped = _map_message(serializer.loads(msg))
-            for key in self._subscriptions:
-                if self._subscriptions[key]:
-                    value = mapped.get(key)
-                else:
-                    value = None
-                
-                payload = "%s%s" % (serializer.dumps(header), value)
-                self._datastore.append(key, payload, oid)
 
     @inlineCallbacks
     def onJoin(self, details):
@@ -275,5 +277,6 @@ def main():
     reactor.run()
 
 if __name__ == "__main__":
+
     pass
 
