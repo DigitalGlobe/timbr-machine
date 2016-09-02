@@ -46,9 +46,8 @@ setup(name='timbr-machine',
       }
       data_files=[
         ('share/jupyter/nbextensions/timbr_machine', [
-            'timbr/static/index.js'
-        ]),
-      ],
+            'timbr/static/index.js']),
+        ],
       install_requires=[
           "pymongo>=2.8",
           "dask",
