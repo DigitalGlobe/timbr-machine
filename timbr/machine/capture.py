@@ -254,15 +254,28 @@ class WampCaptureComponent(ApplicationSession):
 def main():
     global _capture_runner
     log.startLogging(sys.stdout)
+<<<<<<< HEAD
+=======
+    juno_auth_token = os.environ.get("JUNO_AUTH_TOKEN")
+>>>>>>> master
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
     # NOTE: all of these are placeholders
     parser.add_argument("--wamp-realm", default=u"jupyter", help='Router realm')
+<<<<<<< HEAD
     parser.add_argument("--wamp-url", default=u"ws://127.0.0.1:8123", help="WAMP Websocket URL")
     parser.add_argument("--token", type=unicode, help="OAuth token to connect to router")
     args = parser.parse_args()
 
+=======
+    parser.add_argument("--wamp-url", default=u"wss://juno.timbr.io/wamp/route", help="WAMP Websocket URL")
+    parser.add_argument("--token", type=unicode, default=juno_auth_token, help="OAuth token to connect to router")
+    parser.add_argument("--session-key", defaulthelp="The kernel key that you want to capture shit from")
+    args = parser.parse_args()
+
+
+>>>>>>> master
     _capture_runner = ApplicationRunner(url=unicode(args.wamp_url), realm=unicode(args.wamp_realm),
                                         debug=args.debug, 
                                         headers={"Authorization": "Bearer {}".format(args.token),
@@ -278,5 +291,9 @@ def main():
 
 if __name__ == "__main__":
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> master
     pass
 
