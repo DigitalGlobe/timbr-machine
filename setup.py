@@ -42,7 +42,7 @@ setup(name='timbr-machine',
       entry_points = {
         "console_scripts": [
             "machine-captd = timbr.machine.capture:main",
-            "machine = timbr.machine.cli.cli:main"]
+            ]
       }
       data_files=[
         ('share/jupyter/nbextensions/timbr_machine', [
@@ -54,7 +54,8 @@ setup(name='timbr-machine',
           "dask",
           "ipython",
           "observed",
-          "jupyter_react"
+          "jupyter_react",
+          "subprocess32"
         ],
       tests_require=[
           "nose",
