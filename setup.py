@@ -40,14 +40,15 @@ setup(name='timbr-machine',
       packages=['timbr', 'timbr.machine'],
       zip_safe=False,
       entry_points = {
-        "console_scripts": [
-            "machine-captd = timbr.machine.capture:main",
+        'console_scripts': [
+            "machine-captd = twola.capture:main",
             ]
-      }
+        },
       data_files=[
         ('share/jupyter/nbextensions/timbr_machine', [
-            'timbr/static/index.js']),
-        ],
+            'timbr/static/index.js'
+        ]),
+      ],
       install_requires=[
           "pymongo>=2.8",
           "dask",
