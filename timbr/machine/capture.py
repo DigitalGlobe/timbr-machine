@@ -236,9 +236,8 @@ def build_capture_component(kernel_key):
 
                 yield self._iterlocks[key].run(critical)
 
-
-        log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.snapshot".format(self._kernel_key))
-        yield self.register(snapshot, 'io.timbr.kernel.{}.captures.snapshot'.format(self._kernel_key), RegisterOptions(details_arg='details'))
+            log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.snapshot".format(self._kernel_key))
+            yield self.register(snapshot, 'io.timbr.kernel.{}.captures.snapshot'.format(self._kernel_key), RegisterOptions(details_arg='details'))
 
         def onLeave(self, details):
             self._flush()
@@ -256,36 +255,26 @@ def build_capture_component(kernel_key):
 def main():
     global _capture_runner
     log.startLogging(sys.stdout)
-    juno_auth_token = os.environ.get("JUNO_AUTH_TOKEN")
 
-    parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
-    # NOTE: all of these are placeholders
     parser.add_argument("--wamp-realm", default=u"jupyter", help='Router realm')
-    parser.add_argument("--wamp-url", default=u"ws://127.0.0.1:8123", help="WAMP Websocket URL")
-    parser.add_argument("--token", type=unicode, help="OAuth token to connect to router")
-    args = parser.parse_args()
-
     parser.add_argument("--wamp-url", default=u"wss://juno.timbr.io/wamp/route", help="WAMP Websocket URL")
     parser.add_argument("--token", type=unicode, default=juno_auth_token, help="OAuth token to connect to router")
-    parser.add_argument("--session-key", help="The kernel key that you want to capture shit from")
+    parser.add_argument("--session-key", help="The kernel key that you want to capture from")
     args = parser.parse_args()
 
 
     _capture_runner = ApplicationRunner(url=unicode(args.wamp_url), realm=unicode(args.wamp_realm),
                                         debug=args.debug, 
                                         headers={"Authorization": "Bearer {}".format(args.token),
-                                                    "X-Kernel-ID": client.session.key})
+                                                    "X-Kernel-ID": args.session_key})
 
 
     log.msg("Connecting to router: %s" % args.wamp_url)
     log.msg("  Project Realm: %s" % (args.wamp_realm))
 
-    _capture_runner.run(WampCaptureComponent, start_reactor=False)
+    _capture_runner.run(build_capture_component(args.session_key), start_reactor=False)
 
     reactor.run()
 
-if __name__ == "__main__":
-
-    pass
 
