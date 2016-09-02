@@ -39,6 +39,11 @@ setup(name='timbr-machine',
       license='MIT',
       packages=['timbr', 'timbr.machine'],
       zip_safe=False,
+      entry_points = {
+        "console_scripts": [
+            "machine-captd = timbr.machine.capture:main",
+            "machine = timbr.machine.cli.cli:main"]
+      }
       data_files=[
         ('share/jupyter/nbextensions/timbr_machine', [
             'timbr/static/index.js'
