@@ -10,7 +10,6 @@ from collections import defaultdict
 import tables
 
 from twola.datastore import UnstructuredStore
-import timbr.serializer as serializer
 
 from txzmq import ZmqEndpoint, ZmqFactory, ZmqSubConnection
 
@@ -22,6 +21,9 @@ from autobahn.twisted.wamp import ApplicationRunner, ApplicationSession
 from autobahn.wamp.exception import ApplicationError
 from autobahn.wamp.types import RegisterOptions, ComponentConfig
 from autobahn.twisted.util import sleep
+
+from timbr.machine import serializer
+
 
 _capture_runner = None
 
