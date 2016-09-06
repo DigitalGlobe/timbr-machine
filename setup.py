@@ -2,13 +2,13 @@ from setuptools import setup
 from setuptools.command.develop import develop as _develop
 from setuptools.command.install import install as _install
 import os
-from notebook.nbextensions import install_nbextension
-from notebook.services.config import ConfigManager
+
 extension_dir = os.path.join(os.path.dirname(__file__), "timbr", "static")
 
 class develop(_develop):
     try:
-
+        from notebook.nbextensions import install_nbextension
+        from notebook.services.config import ConfigManager
         def run(self):
             _develop.run(self)
             install_nbextension(extension_dir, symlink=True,
