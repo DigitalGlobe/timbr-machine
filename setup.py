@@ -27,9 +27,10 @@ class develop(_develop):
 class install(_install):
     try:
         def run(self):
-            _install.run(self)
-            cm = ConfigManager()
-            cm.update('notebook', {"load_extensions": {"timbr_machine/index": True } })
+            if install_nbextension is not None and ConfigManager is not None:
+                _install.run(self)
+                cm = ConfigManager()
+                cm.update('notebook', {"load_extensions": {"timbr_machine/index": True } })
     except:
         pass
 
