@@ -41,7 +41,7 @@ setup(name='timbr-machine',
       zip_safe=False,
       entry_points = {
         'console_scripts': [
-            "machine-captd = twola.capture:main",
+            "machine-captd = timbr.machine.capture:main",
             ]
         },
       data_files=[
@@ -55,7 +55,8 @@ setup(name='timbr-machine',
           "ipython",
           "observed",
           "jupyter_react",
-          "subprocess32"
+          "subprocess32",
+          "pytables",
         ],
       tests_require=[
           "nose",
