@@ -9,7 +9,6 @@ import os
 from collections import defaultdict
 import tables
 
-from twola.datastore import UnstructuredStore
 
 from txzmq import ZmqEndpoint, ZmqFactory, ZmqSubConnection
 
@@ -22,7 +21,10 @@ from autobahn.wamp.exception import ApplicationError
 from autobahn.wamp.types import RegisterOptions, ComponentConfig
 from autobahn.twisted.util import sleep
 
-from timbr.machine import serializer
+from timbr.machine import 
+
+from timbr.datastore.hdf5 import UnstructuredStore
+
 
 
 _capture_runner = None
@@ -64,7 +66,7 @@ class CaptureConnection(ZmqSubConnection):
 
 def build_capture_component(kernel_key):
     class WampCaptureComponent(ApplicationSession):
-        def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="machine/data/.capture", 
+        def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="/machine/data/.capture", 
                         base_endpoint="ipc:///tmp/timbr-machine/", tracks=8, oid_pattern=r'[0-9a-fA-F]+$'):
             ApplicationSession.__init__(self, config=config)
             self._kernel_key = kernel_key
