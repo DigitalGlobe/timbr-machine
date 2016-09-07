@@ -9,7 +9,6 @@ import os
 from collections import defaultdict
 import tables
 
-
 from txzmq import ZmqEndpoint, ZmqFactory, ZmqSubConnection
 
 from twisted.python import log
@@ -37,9 +36,10 @@ def _map_message(message):
     return d
 
 class CaptureConnection(ZmqSubConnection):
-    def __init__(self, factory, endpoint, subscriptions):
+    def __init__(self, factory, endpoint, subscriptions, oid_pattern=r'[0-9a-fA-F]+$'):
         self._endpoint = endpoint
         self._subscriptions = subscriptions
+        self._oid_pattern = oid_pattern
         ZmqSubConnection.__init__(self, factory, ZmqEndpoint('connect', endpoint))
         self.subscribe("")
 
@@ -65,7 +65,7 @@ class CaptureConnection(ZmqSubConnection):
 def build_capture_component(kernel_key):
     class WampCaptureComponent(ApplicationSession):
         def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="/machine/data/.capture", 
-                        base_endpoint="ipc:///tmp/timbr-machine/", tracks=8, oid_pattern=r'[0-9a-fA-F]+$'):
+                        base_endpoint="ipc:///tmp/timbr-machine/", tracks=8):
             ApplicationSession.__init__(self, config=config)
             self._kernel_key = kernel_key
             self._subscriptions = {}
@@ -258,16 +258,16 @@ def main():
     global _capture_runner
     log.startLogging(sys.stdout)
 
+    parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
     parser.add_argument("--wamp-realm", default=u"jupyter", help='Router realm')
     parser.add_argument("--wamp-url", default=u"wss://juno.timbr.io/wamp/route", help="WAMP Websocket URL")
-    parser.add_argument("--token", type=unicode, default=juno_auth_token, help="OAuth token to connect to router")
+    parser.add_argument("--token", type=unicode, help="OAuth token to connect to router")
     parser.add_argument("--session-key", help="The kernel key that you want to capture from")
     args = parser.parse_args()
 
 
     _capture_runner = ApplicationRunner(url=unicode(args.wamp_url), realm=unicode(args.wamp_realm),
-                                        debug=args.debug, 
                                         headers={"Authorization": "Bearer {}".format(args.token),
                                                     "X-Kernel-ID": args.session_key})
 
