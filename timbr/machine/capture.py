@@ -21,8 +21,6 @@ from autobahn.wamp.exception import ApplicationError
 from autobahn.wamp.types import RegisterOptions, ComponentConfig
 from autobahn.twisted.util import sleep
 
-from timbr.machine import 
-
 from timbr.datastore.hdf5 import UnstructuredStore
 
 
