@@ -56,7 +56,6 @@ setup(name='timbr-machine',
           "observed",
           "jupyter_react",
           "subprocess32",
-          "pytables",
         ],
       tests_require=[
           "nose",
