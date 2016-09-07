@@ -44,7 +44,7 @@ def is_serialization_task(task):
 
 
 class BaseMachine(object):
-    def __init__(self, stages=8, bufsize=1024):
+    def __init__(self, stages=8, bufsize=1024, serialize_fn=json_serialize):
         self.q = Queue(bufsize)
         self.tbl = {}
         self._status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.q.qsize()}
@@ -53,7 +53,7 @@ class BaseMachine(object):
         self._dirty = True
         self._getter = partial(get, num_workers=1)
 
-        self.serialize_fn = json_serialize
+        self.serialize_fn = serialize_fn
 
         self.REFERENCE_DASK = {
             "oid_s": (str, "oid"),
