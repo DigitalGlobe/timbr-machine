@@ -3,25 +3,29 @@ from setuptools.command.develop import develop as _develop
 from setuptools.command.install import install as _install
 import os
 
+try: 
+    from notebook.nbextensions import install_nbextension
+    from notebook.services.config import ConfigManager
+except ImportError:
+    install_nbextension = None
+    ConfigManager = None
+
 extension_dir = os.path.join(os.path.dirname(__file__), "timbr", "static")
 
 class develop(_develop):
     try:
-        from notebook.nbextensions import install_nbextension
-        from notebook.services.config import ConfigManager
         def run(self):
-            _develop.run(self)
-            install_nbextension(extension_dir, symlink=True,
+            if install_nbextension is not None and ConfigManager is not None:
+                _develop.run(self)
+                install_nbextension(extension_dir, symlink=True,
                                 overwrite=True, user=True, destination="timbr_machine")
-            cm = ConfigManager()
-            cm.update('notebook', {"load_extensions": {"timbr_machine/index": True } })
+                cm = ConfigManager()
+                cm.update('notebook', {"load_extensions": {"timbr_machine/index": True } })
     except:
         pass
 
 class install(_install):
     try:
-        from notebook.nbextensions import install_nbextension
-        from notebook.services.config import ConfigManager
         def run(self):
             _install.run(self)
             cm = ConfigManager()
