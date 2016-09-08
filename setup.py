@@ -44,7 +44,7 @@ setup(name='timbr-machine',
       license='MIT',
       packages=['timbr', 'timbr.machine'],
       zip_safe=False,
-      entrypoints = {
+      entry_points = {
         'console_scripts': [
             "machine-captd = timbr.machine.capture:main"
             ]
