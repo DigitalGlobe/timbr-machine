@@ -256,6 +256,7 @@ def build_capture_component(kernel_key):
 
 def main():
     global _capture_runner
+
     log.startLogging(open("/machine/log/captd.log", "w"))
 
     parser = argparse.ArgumentParser()
