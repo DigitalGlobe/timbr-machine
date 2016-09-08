@@ -15,8 +15,8 @@ extension_dir = os.path.join(os.path.dirname(__file__), "timbr", "static")
 class develop(_develop):
     try:
         def run(self):
+            _develop.run(self)
             if install_nbextension is not None and ConfigManager is not None:
-                _develop.run(self)
                 install_nbextension(extension_dir, symlink=True,
                                 overwrite=True, user=True, destination="timbr_machine")
                 cm = ConfigManager()
@@ -27,8 +27,8 @@ class develop(_develop):
 class install(_install):
     try:
         def run(self):
+            _install.run(self)
             if install_nbextension is not None and ConfigManager is not None:
-                _install.run(self)
                 cm = ConfigManager()
                 cm.update('notebook', {"load_extensions": {"timbr_machine/index": True } })
     except:
@@ -44,11 +44,11 @@ setup(name='timbr-machine',
       license='MIT',
       packages=['timbr', 'timbr.machine'],
       zip_safe=False,
-      entry_points = {
-        'console_scripts': [
-            "machine-captd = timbr.machine.capture:main"
+      entry_points={
+        "console_scripts": [
+            "machine-captd = timbr.machine.capture:main",
             ]
-        },
+        }
       data_files=[
         ('share/jupyter/nbextensions/timbr_machine', [
             'timbr/static/index.js'
