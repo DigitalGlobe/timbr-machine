@@ -256,7 +256,7 @@ def build_capture_component(kernel_key):
 
 def main():
     global _capture_runner
-    log.startLogging(sys.stdout)
+    log.startLogging(open("/machine/log/captd.log", "w"))
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
