@@ -48,7 +48,7 @@ setup(name='timbr-machine',
         "console_scripts": [
             "machine-captd = timbr.machine.capture:main",
             ]
-        }
+        },
       data_files=[
         ('share/jupyter/nbextensions/timbr_machine', [
             'timbr/static/index.js'
