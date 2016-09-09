@@ -36,8 +36,9 @@ def _map_message(message):
     return d
 
 class CaptureConnection(ZmqSubConnection):
-    def __init__(self, factory, endpoint, subscriptions, oid_pattern=r'[0-9a-fA-F]+$'):
+    def __init__(self, factory, endpoint, datastore, subscriptions, oid_pattern=r'[0-9a-fA-F]+$'):
         self._endpoint = endpoint
+        self._datastore = datastore
         self._subscriptions = subscriptions
         self._oid_pattern = oid_pattern
         ZmqSubConnection.__init__(self, factory, ZmqEndpoint('connect', endpoint))
