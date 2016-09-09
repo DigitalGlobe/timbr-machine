@@ -74,7 +74,6 @@ def build_capture_component(kernel_key):
             self._iterlocks = defaultdict(DeferredLock)
             self._auto_flusher = LoopingCall(self._flush)
             self._auto_flusher.start(10.0) # Should make this interval value configurable
-            self._oid_pattern = oid_pattern
             self._configure(tracks)
             self._factory = ZmqFactory()
             self._conn = CaptureConnection(self._factory, os.path.join(base_endpoint, kernel_key), self._datastore, self._subscriptions)
