@@ -42,7 +42,7 @@ setup(name='timbr-machine',
       author='Pramukta Kumar',
       author_email='pramukta.kumar@timbr.io',
       license='MIT',
-      packages=['timbr', 'timbr.machine', 'timbr.datastore', 'timbr.compat', 'timbr.cli']
+      packages=['timbr', 'timbr.machine', 'timbr.datastore', 'timbr.compat', 'timbr.cli'],
       zip_safe=False,
       entry_points={
         "console_scripts": [
