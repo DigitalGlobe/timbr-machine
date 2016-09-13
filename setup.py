@@ -36,7 +36,7 @@ class install(_install):
 
 setup(name='timbr-machine',
       cmdclass={'develop': develop, 'install': install},
-      version='0.1',
+      version='0.1.1',
       description='Dask-based data collection and processing machine',
       url='https://bitbucket.com/timbr-io/timbr-machine',
       author='Pramukta Kumar',
