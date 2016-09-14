@@ -27,6 +27,7 @@ from .profiler import MachineProfiler
 from .exception import UpstreamError
 
 from .display import Display
+from .dashboard import Dashboard
 
 def json_serialize(obj):
     try:
@@ -73,6 +74,9 @@ class BaseMachine(object):
 
     def display_status(self, interval=1):
         self._display = Display(self, interval=interval)
+
+    def dashboard(self):
+        self._dashboard = Dashboard(self)
 
     @property
     def status(self):
