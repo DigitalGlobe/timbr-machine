@@ -1,9 +1,4 @@
-
-from collections import namedtuple, OrderedDict
-from itertools import starmap
-
 import threading
-import inspect
 
 # Stolen from StackOverflow:
 # http://stackoverflow.com/questions/323972/is-there-any-way-to-kill-a-thread-in-python
@@ -25,6 +20,7 @@ class StoppableThread(threading.Thread):
 def identity(x):
     return x
 
+import inspect
 
 def wrap_transform(fn):
     """
@@ -67,7 +63,8 @@ def json_serializable_exception(e, **kwargs):
     emsg["_exception"].update(kwargs)
     return emsg
 
-import os, errno
+import os
+import errno
 
 def mkdir_p(path):
     try:
@@ -77,9 +74,51 @@ def mkdir_p(path):
             pass
         else: raise
 
+# Modifed from StackOverflow:
+# http://stackoverflow.com/questions/12700893/how-to-check-if-a-string-is-a-valid-python-identifier-including-keyword-check
 
+import ast
+import types 
 
+def isidentifier(ident):
+    """Determines, if string is valid Python identifier."""
 
+    # Smoke test - if it's not string, then it's not identifier, but we
+    # want to just silence exception. It's better to fail fast.
+    if not isinstance(ident, types.StringTypes):
+        raise TypeError('expected str, but got {!r}'.format(type(ident)))
+
+    # Resulting AST of simple identifier is <Module [<Expr <Name "foo">>]>
+    try:
+        root = ast.parse(ident)
+    except SyntaxError:
+        return False
+
+    if not isinstance(root, ast.Module):
+        return False
+
+    if len(root.body) != 1:
+        return False
+
+    if not isinstance(root.body[0], ast.Expr):
+        return False
+
+    if not isinstance(root.body[0].value, ast.Name):
+        return False
+
+    if root.body[0].value.id != ident:
+        return False
+
+    return True
+
+import re
+
+def camelcase_to_underscored(string):
+    """ camelCase to Pythonic naming """
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+from collections import namedtuple, OrderedDict
 
 class OrderedDefaultDict(OrderedDict):
     def __init__(self, default_factory, *args, **kwargs):
