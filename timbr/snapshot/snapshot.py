@@ -14,9 +14,9 @@ import tables
 import simplejson as json
 import jsonpath_rw as jsonpath
 
-import timbr.serializer as serializer
-from timbr.util.general import isidentifier, camelcase_to_underscored
-from timbr.exception import IncompleteSyncError
+import timbr.machine.serializer as serializer
+from timbr.machine.util import isidentifier, camelcase_to_underscored
+from timbr.snapshot.exception import IncompleteSyncError
 
 
 class NotSupportedException(NotImplementedError):
