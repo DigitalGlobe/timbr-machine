@@ -118,6 +118,12 @@ def camelcase_to_underscored(string):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
+import timbr.machine.serializer as serializer
+
+def make_wamp_safe(obj):
+    """ Crappy way of forcing an object that is safe for our serializer to be ok for the Autobahn WAMP one """
+    return serializer.wamp_safe_loads(serializer.dumps(obj))
+
 from collections import namedtuple, OrderedDict
 
 class OrderedDefaultDict(OrderedDict):
