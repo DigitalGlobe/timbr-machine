@@ -43,7 +43,6 @@ from autobahn import wamp
 
 from timbr.machine.util import make_wamp_safe
 
-_project_realm = os.environ.get('PROJECT_REALM', "jupyter")
 _snapshot_runner = None
 
 class LoggingEventHandler(RegexMatchingEventHandler):
@@ -68,7 +67,7 @@ class LoggingEventHandler(RegexMatchingEventHandler):
 
 def build_snapshot_component(kernel_key):
     class WampSnapshotComponent(ApplicationSession):
-        def __init__(self, kernel_key, config=ComponentConfig(realm=unicode(_project_realm)), path="/twola-data/data"):
+        def __init__(self, kernel_key, config=ComponentConfig(realm=unicode("jupyter")), path="/machine/data"):
             ApplicationSession.__init__(self, config=config)
             self._kernel_key = kernel_key
             self.path = path
@@ -348,10 +347,12 @@ def build_snapshot_component(kernel_key):
             filename = os.path.split(event.src_path)[-1]
             _logger.debug("Detected change in file: %s" % filename)
 
+    return WampSnapshotComponent(kernel_key)
+
 
 
 def main():
-    global _project_realm, _snapshot_runner
+    global _snapshot_runner
 
     log.startLogging(open("/machine/log/snapd.log", "w"))
 
@@ -360,11 +361,11 @@ def main():
     parser.add_argument("--wamp-realm", default=u"jupyter", help='Router realm')
     parser.add_argument("--wamp-url", default=u"wss://juno.timbr.io/wamp/route", help="WAMP Websocket URL")
     parser.add_argument("--token", type=unicode, help="OAuth token to connect to router")
-    parser.add_argument("--session-key", help="The kernel key that you want to capture from")
+    parser.add_argument("--session-key", help="The kernel key that you want to register with from")
     args = parser.parse_args()
 
 
-    _capture_runner = ApplicationRunner(url=unicode(args.wamp_url), realm=unicode(args.wamp_realm),
+    _snapshot_runner = ApplicationRunner(url=unicode(args.wamp_url), realm=unicode(args.wamp_realm),
                                         headers={"Authorization": "Bearer {}".format(args.token),
                                                     "X-Kernel-ID": args.session_key})
 
@@ -372,7 +373,7 @@ def main():
     log.msg("Connecting to router: %s" % args.wamp_url)
     log.msg("  Project Realm: %s" % (args.wamp_realm))
 
-    _capture_runner.run(build_capture_component(args.session_key), start_reactor=False)
+    _snapshot_runner.run(build_snapshot_component(args.session_key), start_reactor=False)
 
     reactor.run()
 
