@@ -12,10 +12,10 @@ from IPython import get_ipython
 
 import zmq
 
-from timbr.machine.base_machine import BaseMachine
-from timbr.machine.profiler import MachineProfiler
-from timbr.machine.exception import UpstreamError
-from timbr.machine.util import StoppableThread, mkdir_p, json_serializable_exception, identity
+from .base_machine import BaseMachine
+from .profiler import MachineProfiler
+from .exception import UpstreamError
+from .util import StoppableThread, mkdir_p, json_serializable_exception, identity
 from bson.objectid import ObjectId
 from collections import deque
 from observed import event

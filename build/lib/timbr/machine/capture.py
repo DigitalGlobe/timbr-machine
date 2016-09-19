@@ -22,7 +22,7 @@ from autobahn.twisted.util import sleep
 
 from timbr.datastore.hdf5 import UnstructuredStore
 
-from timbr.machine import serializer
+
 
 _capture_runner = None
 
@@ -264,7 +264,7 @@ def main():
     parser.add_argument("--wamp-realm", default=u"jupyter", help='Router realm')
     parser.add_argument("--wamp-url", default=u"wss://juno.timbr.io/wamp/route", help="WAMP Websocket URL")
     parser.add_argument("--token", type=unicode, help="OAuth token to connect to router")
-    parser.add_argument("--session-key", help="The kernel key that you want to register with")
+    parser.add_argument("--session-key", help="The kernel key that you want to capture from")
     args = parser.parse_args()
 
 

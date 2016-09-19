@@ -22,11 +22,11 @@ import inspect
 import zmq
 import json
 
-from timbr.machine.util import identity, wrap_transform, json_serializable_exception
-from timbr.machine.profiler import MachineProfiler
-from timbr.machine.exception import UpstreamError
+from .util import identity, wrap_transform, json_serializable_exception
+from .profiler import MachineProfiler
+from .exception import UpstreamError
 
-from timbr.machine.display import Display
+from .display import Display
 
 def json_serialize(obj):
     try:

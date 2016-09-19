@@ -1,5 +1,5 @@
 def _build_table_work_fn(snapfile, name, tblspec):
-    from timbr.snapshot.snapshot import Snapshot
+    from timbr.machine.snapshot import Snapshot
     snapshot = Snapshot(snapfile)
     snapshot.build_table(name, tblspec, style="raw", sync=False)
     snapshot.close()
@@ -22,8 +22,8 @@ import tables
 import sh
 
 from timbr.snapshot.exception import IncompleteSyncError
-from timbr.snapshot.snapshot import Snapshot
-from timbr.machine import serializer
+from timbr.machine.snapshot import Snapshot
+import timbr.machine.serializer as serializer
 import logging
 _logger = logging.getLogger("timbr.snapshot")
 

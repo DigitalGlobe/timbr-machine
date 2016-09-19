@@ -1,1 +1,1 @@
-from .machine import Machine
+from timbr.machine.machine import Machine
