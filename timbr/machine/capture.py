@@ -65,7 +65,7 @@ class CaptureConnection(ZmqSubConnection):
 
 def build_capture_component(kernel_key):
     class WampCaptureComponent(ApplicationSession):
-        def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="/machine/data/.capture", 
+        def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="machine/data/.capture", 
                         base_endpoint="ipc:///tmp/timbr-machine/", tracks=8):
             ApplicationSession.__init__(self, config=config)
             self._kernel_key = kernel_key
@@ -257,7 +257,7 @@ def build_capture_component(kernel_key):
 def main():
     global _capture_runner
 
-    log.startLogging(open("/machine/log/captd.log", "w"))
+    log.startLogging(open("machine/log/captd.log", "w"))
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")

@@ -67,7 +67,7 @@ class LoggingEventHandler(RegexMatchingEventHandler):
 
 def build_snapshot_component(kernel_key):
     class WampSnapshotComponent(ApplicationSession):
-        def __init__(self, kernel_key, config=ComponentConfig(realm=unicode("jupyter")), path="/machine/data"):
+        def __init__(self, kernel_key, config=ComponentConfig(realm=unicode("jupyter")), path="machine/data"):
             ApplicationSession.__init__(self, config=config)
             self._kernel_key = kernel_key
             self.path = path
@@ -354,7 +354,7 @@ def build_snapshot_component(kernel_key):
 def main():
     global _snapshot_runner
 
-    log.startLogging(open("/machine/log/snapd.log", "w"))
+    log.startLogging(open("machine/log/snapd.log", "w"))
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
