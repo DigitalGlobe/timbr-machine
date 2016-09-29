@@ -11,7 +11,7 @@ class Dashboard(Component):
         self.on_msg(self._handle_msg)
         self.machine = machine
         self._module = module
-        self.send({"method": "display", "props": {"config": {"foo": "bar"}}})
+        self.send({"method": "display", "props": {"config": {'kernel': '57ed6a3cb9216d8366a4c8fc', 'init': 'foo', 'functions': [['f0', {'name': 'foo'}], ['f1', {'name': 'bar'}]], 'source': [ 'source', {'name': 'source'}]}}})
 
     def _handle_msg(self, msg):
         data = msg['content']['data']

@@ -1,5 +1,3 @@
-var version = require('./package.json').version;
-
 const babelSettings = {
   plugins: [
     'add-module-exports',
