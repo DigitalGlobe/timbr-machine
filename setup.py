@@ -42,8 +42,14 @@ setup(name='timbr-machine',
       author='Pramukta Kumar',
       author_email='pramukta.kumar@timbr.io',
       license='MIT',
-      packages=['timbr', 'timbr.machine'],
+      packages=['timbr', 'timbr.machine', 'timbr.datastore', 'timbr.compat', 'timbr.cli', 'timbr.snapshot'],
       zip_safe=False,
+      entry_points={
+        "console_scripts": [
+            "machine-captd = timbr.machine.capture:main",
+            "machine-snapd = timbr.machine.snapshot:main",
+            ]
+        },
       data_files=[
         ('share/jupyter/nbextensions/timbr_machine', [
             'timbr/static/index.js'
@@ -54,7 +60,11 @@ setup(name='timbr-machine',
           "dask",
           "ipython",
           "observed",
-          "jupyter_react"
+          "jupyter_react",
+          "tables>=3.2.1",
+          "simplejson>=3.6.5",
+          "watchdog>=0.8.1",
+          "jsonpath-rw>=1.4.0",
         ],
       tests_require=[
           "nose",
