@@ -1,5 +1,7 @@
 import components from '@timbr/react-machine'; 
 import JupyterReact from 'jupyter-react-js';
+import react from 'react';
+import reactDom from 'react-dom';
 
 function load_ipython_extension () {
   requirejs([
@@ -14,7 +16,7 @@ function load_ipython_extension () {
           commId
         });
       }
-      JupyterReact.init( Jupyter, events, 'timbr.machine', { components, on_update } );
+      JupyterReact.init( Jupyter, events, 'timbr.machine', { components, on_update, save: true, react, reactDom } );
   });
 }
 
