@@ -14,6 +14,7 @@
   ],
   "scripts": {
     "prepublish": "webpack",
+    "start": "webpack -w",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
