@@ -1,3 +1,5 @@
+const path = require( 'path' );
+
 const babelSettings = {
   plugins: [
     'add-module-exports',
@@ -32,5 +34,8 @@ module.exports = [{
       loader: "style!css!less?sourceMap"
     }]
   },
+  resolve: { 
+    fallback: path.join( __dirname, "node_modules" )
+  }
   devtool: 'cheap-module-source-map'
 }];
