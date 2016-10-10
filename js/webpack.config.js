@@ -1,3 +1,5 @@
+const path = require( 'path' );
+
 const babelSettings = {
   plugins: [
     'add-module-exports',
@@ -30,9 +32,9 @@ module.exports = [
           test: /\.less$/, loader: "style!css!less"
         }
       ]
+    },
+    resolve: { 
+      fallback: path.join( __dirname, "node_modules" )
     }
   },
-  resolve: { 
-    fallback: path.join( __dirname, "node_modules" )
-  }
 ];
