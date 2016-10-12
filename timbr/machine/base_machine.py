@@ -27,6 +27,7 @@ from timbr.machine.profiler import MachineProfiler
 from timbr.machine.exception import UpstreamError
 
 from timbr.machine.display import Display
+from timbr.machine.dashboard import Dashboard
 
 def json_serialize(obj):
     try:
@@ -73,6 +74,9 @@ class BaseMachine(object):
 
     def display_status(self, interval=1):
         self._display = Display(self, interval=interval)
+
+    def dashboard(self):
+        self._dashboard = Dashboard(self)
 
     @property
     def status(self):
@@ -140,4 +144,4 @@ class BaseMachine(object):
         return s
 
     def print_status(self):
-        print(self.format_status())    
+        print(self.format_status())

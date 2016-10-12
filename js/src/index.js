@@ -1,4 +1,4 @@
-import components from 'react-timbr-machine'; 
+import components from '@timbr/react-machine'; 
 import JupyterReact from 'jupyter-react-js';
 
 function load_ipython_extension () {
