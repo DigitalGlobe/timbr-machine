@@ -36,6 +36,6 @@ module.exports = [{
   },
   resolve: { 
     fallback: path.join( __dirname, "node_modules" )
-  }
+  },
   devtool: 'cheap-module-source-map'
 }];
