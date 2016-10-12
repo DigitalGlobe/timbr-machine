@@ -1,4 +1,4 @@
-var version = require('./package.json').version;
+const path = require( 'path' );
 
 const babelSettings = {
   plugins: [
@@ -11,27 +11,30 @@ const babelSettings = {
 
 
 module.exports = [
-    {
-      entry: './src/index.js',
-      output: {
-          filename: 'index.js',
-          path: '../timbr/static',
-          libraryTarget: 'amd'
-      },
-      module : {
-        loaders : [
-          {
-            test: /\.js?$/,
-            exclude: /(node_modules|bower_components)/,
-            loaders: [`babel?${JSON.stringify( babelSettings )}`]
-          },
-          { 
-            test: /\.css$/, loader: "style-loader!css-loader" 
-          },
-          {
-            test: /\.less$/, loader: "style!css!less"
-          }
-        ]
-      }
+  {
+    entry: './src/index.js',
+    output: {
+      filename: 'index.js',
+      path: '../timbr/static',
+      libraryTarget: 'amd'
+    },
+    module : {
+      loaders : [
+        {
+          test: /\.js?$/,
+          exclude: /(node_modules|bower_components)/,
+          loaders: [`babel?${JSON.stringify( babelSettings )}`]
+        },
+        { 
+          test: /\.css$/, loader: "style-loader!css-loader" 
+        },
+        {
+          test: /\.less$/, loader: "style!css!less"
+        }
+      ]
+    },
+    resolve: { 
+      fallback: path.join( __dirname, "node_modules" )
     }
+  },
 ];
