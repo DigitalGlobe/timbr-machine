@@ -55,7 +55,7 @@ class CaptureConnection(ZmqSubConnection):
     def _capture(self, msg, hdr):
         if self._capturing():
             oid = re.findall(self._oid_pattern, hdr)[0]
-            log.msg("")
+            log.msg("incoming message = {}".format(msg))
             mapped = _map_message(serializer.loads(msg))
             log.msg(json.dumps(mapped))
             for key in self._subscriptions:
