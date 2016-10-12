@@ -54,13 +54,17 @@ class CaptureConnection(ZmqSubConnection):
         if self._capturing():
             oid = re.findall(self._oid_pattern, hdr)[0]
             mapped = _map_message(serializer.loads(msg))
+            log.msg(json.dumps(mapped))
             for key in self._subscriptions:
                 if self._subscriptions[key]:
                     value = mapped.get(key)
+                    log.msg(value)
                 else:
+                    log.msg("Value=None")
                     value = None
                 
                 payload = "%s%s" % (serializer.dumps(header), value)
+                log.msg("key={}, payload={}, oid={}".format(key, payload, oid))
                 self._datastore.append(key, payload, oid)
 
 def build_capture_component(kernel_key):
