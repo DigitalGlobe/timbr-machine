@@ -65,7 +65,7 @@ class CaptureConnection(ZmqSubConnection):
                     log.msg("Value=None")
                     value = None
                 
-                payload = "%s%s" % (serializer.dumps(header), value)
+                payload = "%s%s" % (serializer.dumps(hdr), value)
                 log.msg("key={}, payload={}, oid={}".format(key, payload, oid))
                 self._datastore.append(key, payload, oid)
 
