@@ -55,19 +55,14 @@ class CaptureConnection(ZmqSubConnection):
     def _capture(self, msg, hdr):
         if self._capturing():
             oid = re.findall(self._oid_pattern, hdr)[0]
-            log.msg("incoming message = {}".format(msg))
             mapped = _map_message(serializer.loads(msg))
-            log.msg(json.dumps(mapped))
             for key in self._subscriptions:
                 if self._subscriptions[key]:
                     value = mapped.get(key)
-                    log.msg(json.dumps(value))
                 else:
-                    log.msg("Value=None")
                     value = None
                 
                 payload = "%s%s" % (serializer.dumps(hdr), serializer.dumps(value))
-                log.msg("key={}, payload={}, oid={}".format(key, payload, oid))
                 self._datastore.append(key, payload, oid)
 
 def build_capture_component(kernel_key):
@@ -172,7 +167,6 @@ def build_capture_component(kernel_key):
                 @inlineCallbacks
                 def critical():
                     preview_items = yield self._datastore.fetch(key, segment, n=count)
-                    log.msg("preview_items={}".format(preview_items))
                     returnValue([serializer.wamp_safe_loads(item.tostring()) for item in preview_items])
 
                 result = yield self._iterlocks[key].run(critical)
