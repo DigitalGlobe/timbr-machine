@@ -24,6 +24,8 @@ from timbr.datastore.hdf5 import UnstructuredStore
 
 from timbr.machine import serializer
 
+import json
+
 _capture_runner = None
 
 def _map_message(message):
