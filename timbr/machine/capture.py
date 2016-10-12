@@ -34,7 +34,7 @@ def _map_message(message):
         if i == 0:
             d["source"] = msg
         else:
-            d["f{}".format(i)] = msg
+            d["f{}".format(i - 1)] = msg
     return d
 
 class CaptureConnection(ZmqSubConnection):
@@ -55,12 +55,13 @@ class CaptureConnection(ZmqSubConnection):
     def _capture(self, msg, hdr):
         if self._capturing():
             oid = re.findall(self._oid_pattern, hdr)[0]
+            log.msg("")
             mapped = _map_message(serializer.loads(msg))
             log.msg(json.dumps(mapped))
             for key in self._subscriptions:
                 if self._subscriptions[key]:
                     value = mapped.get(key)
-                    log.msg(value)
+                    log.msg(json.dumps(value))
                 else:
                     log.msg("Value=None")
                     value = None
@@ -171,6 +172,7 @@ def build_capture_component(kernel_key):
                 @inlineCallbacks
                 def critical():
                     preview_items = yield self._datastore.fetch(key, segment, n=count)
+                    log.msg("preview_items={}".format(preview_items))
                     returnValue([serializer.wamp_safe_loads(item.tostring()) for item in preview_items])
 
                 result = yield self._iterlocks[key].run(critical)
