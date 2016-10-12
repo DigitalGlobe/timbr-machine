@@ -24,6 +24,8 @@ from timbr.datastore.hdf5 import UnstructuredStore
 
 from timbr.machine import serializer
 
+import json
+
 _capture_runner = None
 
 def _map_message(message):
@@ -32,7 +34,7 @@ def _map_message(message):
         if i == 0:
             d["source"] = msg
         else:
-            d["f{}".format(i)] = msg
+            d["f{}".format(i - 1)] = msg
     return d
 
 class CaptureConnection(ZmqSubConnection):
@@ -60,7 +62,7 @@ class CaptureConnection(ZmqSubConnection):
                 else:
                     value = None
                 
-                payload = "%s%s" % (serializer.dumps(header), value)
+                payload = "%s%s" % (serializer.dumps(hdr), serializer.dumps(value))
                 self._datastore.append(key, payload, oid)
 
 def build_capture_component(kernel_key):
