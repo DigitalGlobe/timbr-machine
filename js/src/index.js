@@ -1,5 +1,12 @@
-import components from '@timbr/react-machine'; 
 import JupyterReact from 'jupyter-react-js';
+
+let components = null;
+
+try {
+  components = require( '@timbr/react-machine' ).default;
+} catch ( error ) {
+  console.error( error );
+}
 
 function load_ipython_extension () {
   requirejs([
