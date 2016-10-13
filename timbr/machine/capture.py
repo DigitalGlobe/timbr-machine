@@ -38,10 +38,11 @@ def _map_message(message):
     return d
 
 class CaptureConnection(ZmqSubConnection):
-    def __init__(self, factory, endpoint, datastore, subscriptions, oid_pattern=r'[0-9a-fA-F]+$'):
+    def __init__(self, factory, endpoint, datastore, subscriptions, track_stack, oid_pattern=r'[0-9a-fA-F]+$'):
         self._endpoint = endpoint
         self._datastore = datastore
         self._subscriptions = subscriptions
+        self._track_stack = track_stack
         self._oid_pattern = oid_pattern
         ZmqSubConnection.__init__(self, factory, ZmqEndpoint('connect', endpoint))
         self.subscribe("")
@@ -55,31 +56,33 @@ class CaptureConnection(ZmqSubConnection):
     def _capture(self, msg, hdr):
         if self._capturing():
             oid = re.findall(self._oid_pattern, hdr)[0]
-            mapped = _map_message(serializer.loads(msg))
-            for key in self._subscriptions:
-                if self._subscriptions[key]:
-                    value = mapped.get(key)
+            mapped = _map_message(serializer.loads(msg)) 
+
+            for key, capturing in [(k, v) for k, v in self._subscriptions.items() if v or self._track_stack]:
+                if capturing:
+                    data = mapped.get(key)
                 else:
-                    value = None
+                    data = None
                 
-                payload = "%s%s" % (serializer.dumps(hdr), serializer.dumps(value))
+                payload = "%s%s" % (serializer.dumps(hdr), serializer.dumps(data))
                 self._datastore.append(key, payload, oid)
 
 def build_capture_component(kernel_key):
     class WampCaptureComponent(ApplicationSession):
         def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="machine/data/.capture", 
-                        base_endpoint="ipc:///tmp/timbr-machine/", tracks=8):
+                        base_endpoint="ipc:///tmp/timbr-machine/", tracks=8, track_stack=False):
             ApplicationSession.__init__(self, config=config)
             self._kernel_key = kernel_key
             self._subscriptions = {}
             self._basename = basename
+            self._track_stack = track_stack
             self._datastore = UnstructuredStore(self._basename)
             self._iterlocks = defaultdict(DeferredLock)
             self._auto_flusher = LoopingCall(self._flush)
             self._auto_flusher.start(10.0) # Should make this interval value configurable
             self._configure(tracks)
             self._factory = ZmqFactory()
-            self._conn = CaptureConnection(self._factory, os.path.join(base_endpoint, kernel_key), self._datastore, self._subscriptions)
+            self._conn = CaptureConnection(self._factory, os.path.join(base_endpoint, kernel_key), self._datastore, self._subscriptions, self._track_stack)
 
         def _configure(self, tracks):
             if len(self._datastore.captures) > 0:
@@ -94,8 +97,6 @@ def build_capture_component(kernel_key):
                 self._datastore.flush()
             except Exception, e:
                 log.msg("Exception caught in _auto_flush: %s" % str(e))
-
-
 
         @inlineCallbacks
         def onJoin(self, details):
@@ -121,7 +122,6 @@ def build_capture_component(kernel_key):
                     self._datastore.create(key)
                     self._subscriptions[key] = True
                     return True
-
 
             log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.subscribe".format(self._kernel_key))
             yield self.register(subscribe, 'io.timbr.kernel.{}.captures.subscribe'.format(self._kernel_key))
