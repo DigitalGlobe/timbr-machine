@@ -222,9 +222,11 @@ class Machine(BaseMachine):
                     f = getattr(main, config["functions"][i][0])
                     machine[i] = f
 
-        _source = getattr(main, config["source"][0])
-        if callable(_source):
-            _source = _source()
-        machine.source = iter(_source)
-        machine._config = config
+        if len(config["source"]) == 1:
+            _source = getattr(main, config["source"][0])
+            if callable(_source):
+                _source = _source()
+            machine.source = iter(_source)
+            machine._config = config
+            
         return machine
