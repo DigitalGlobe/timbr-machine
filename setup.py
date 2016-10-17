@@ -48,6 +48,7 @@ setup(name='timbr-machine',
         "console_scripts": [
             "machine-captd = timbr.machine.capture:main",
             "machine-snapd = timbr.machine.snapshot:main",
+            "machine-pkgd = timbr.machine.packager:main",
             ]
         },
       data_files=[
