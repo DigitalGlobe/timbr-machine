@@ -28,19 +28,21 @@ def cooperative_consume(iter_noblock, cb):
                 yield cb(e)
     return cooperate(fn()).whenDone()
 
-def build_packager_component(kernel_key):
+def build_packager_component(kernel_key, conda_env="juno", env_path="/home/gremlin/anaconda/envs", pkg_path="/home/gremlin/environments"):
     class WampPackagerComponent(ApplicationSession):
-        def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), base_path="/twola-data/environments", conda_env="topology-env"):
+        def __init__(self, kernel_key, conda_env=conda_env, env_path=env_path, pkg_path=pkg_path, config=ComponentConfig(realm=u"jupyter")):
             ApplicationSession.__init__(self, config=config)
             self._kernel_key = kernel_key
-            self._base_path = base_path
+            self._conda_env = conda_env
+            self._env_path = env_path
+            self._pkg_path = pkg_path
             self._conda_env = conda_env
             self._lock = DeferredLock()
 
         @inlineCallbacks
         def install_pkg(self, pkg_type, pkg, details):
             if str(pkg_type) == 'pip':
-                pipcmd = sh.Command('/miniconda/envs/{}/bin/pip'.format(self._conda_env))
+                pipcmd = sh.Command(os.path.join([self._env_path, '{}/bin/pip'.format(self._conda_env)]))
                 yield cooperative_consume( pipcmd("install", pkg, _iter_noblock=True), details.progress)
             else:
                 yield cooperative_consume( sh.conda("install", "--name", self._conda_env, pkg, "-y", _iter_noblock=True), details.progress)
@@ -55,7 +57,7 @@ def build_packager_component(kernel_key):
 
                 @inlineCallbacks
                 def install():
-                  pkg_filepath = os.path.join(self._base_path, "%s.yaml" % pkg_name)
+                  pkg_filepath = os.path.join(self._pkg_path, "%s.yaml" % pkg_name)
                   if not os.path.exists(pkg_filepath):
                       raise IOError("Package specification file :: %s :: not found" % pkg_filepath)
                   else:
@@ -75,7 +77,7 @@ def build_packager_component(kernel_key):
                 yield self._lock.run(install)
                 returnValue(None)
 
-            log.msg("[WampPackagerComponent] Registering Procedure: io.timbr.twola.pkgd.install_environment")
+            log.msg("[WampPackagerComponent] Registering Procedure: io.timbr.kernel.{}.pkgd.install_environment".format(self._kernel_key))
             yield self.register(install_environment, 'io.timbr.kernel.{}.pkgd.install_environment'.format(self._kernel_key), RegisterOptions(details_arg = 'details'))
 
             @inlineCallbacks
@@ -87,7 +89,7 @@ def build_packager_component(kernel_key):
                 yield self._lock.run(install)
                 returnValue(None)
 
-            log.msg("[WampPackagerComponent] Registering Procedure: io.timbr.twola.pkgd.install_package")
+            log.msg("[WampPackagerComponent] Registering Procedure: io.timbr.kernel.{}.pkgd.install_package".format(self._kernel_key))
             yield self.register(install_package, 'io.timbr.kernel.{}.pkgd.install_package'.format(self._kernel_key), RegisterOptions(details_arg = 'details'))
 
             @inlineCallbacks
@@ -95,7 +97,7 @@ def build_packager_component(kernel_key):
 
                 @inlineCallbacks
                 def package():
-                    pkg_filepath = os.path.join(self._base_path, "%s.yaml" %(pkg_name))
+                    pkg_filepath = os.path.join(self._pkg_path, "%s.yaml" %(pkg_name))
                     yield cooperative_consume(
                         sh.conda("env", "export", "-n", self._conda_env, "--file", pkg_filepath, _iter_noblock=True), details.progress)
                     returnValue(None)
@@ -103,7 +105,7 @@ def build_packager_component(kernel_key):
                 yield self._lock.run(package)
                 returnValue(None)
 
-            log.msg("[WampPackagerComponent] Registering Procedure: io.timbr.twola.pkgd.package_environment")
+            log.msg("[WampPackagerComponent] Registering Procedure: io.timbr.kernel.{}.pkgd.package_environment".format(self._kernel_key))
             yield self.register(package_environment, 'io.timbr.kernel.{}.pkgd.package_environment'.format(self._kernel_key), RegisterOptions(details_arg = 'details'))
 
         def onLeave(self, details):
@@ -114,27 +116,32 @@ def build_packager_component(kernel_key):
         def onDisconnect(self):
             log.msg("[WampPackagerComponent] onDisconnect()")
 
+    return WampPackagerComponent(kernel_key)
+
 
 def main():
     global _project_realm, _packager_runner
-    log.startLogging(sys.stdout)
+    
+    log.startLogging(open("/home/gremlin/machine/log/pkgd.log", "w"))
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
-    parser.add_argument("-r", "--realm", default="twola", help="Crossbar router realm for this project")
-    parser.add_argument("-c", "--connect", default=u"127.0.0.1", help="Crossbar router host.")
-    parser.add_argument("--port", default=9000, type=int, help="Crossbar router port for connecting the packager.")
-    
+    parser.add_argument("-wamp-realm", default=u"jupyter", help="Router realm")
+    parser.add_argument("--wamp-url", default=u"wss://juno.timbr.io/wamp/route", help="WAMP Websocket URL")
+    parser.add_argument("--token", type=unicode, help="OAuth token to connect to router")
+    parser.add_argument("--session-key", help="The kernel key that you want to register with")
+    parser.add_argument("--env", default="juno", help="The target Anaconda install and package environment")
     args = parser.parse_args()
 
 
-    _packager_runner = ApplicationRunner(url=u"ws://%s:%i" % (args.connect, args.port), realm=unicode(args.realm),
-        debug=args.debug, debug_wamp=args.debug, debug_app=args.debug)
+    _packager_runner = ApplicationRunner(url=unicode(args.wamp_url), realm=unicode(args.wamp_realm),
+                                        headers={"Authorization": "Bearer {}".format(args.token),
+                                                    "X-Kernel-ID": args.session_key})
 
-    log.msg("Router: ws://%s:%i" % (args.connect, args.port))
-    log.msg("  Project Realm: %s" % (args.realm))
+    log.msg("Connecting to router: %s" % args.wamp_url)
+    log.msg("  Project Realm: %s" % (args.wamp_realm))
 
-    _packager_runner.run(WampPackagerComponent, start_reactor=False)
+    _packager_runner.run(build_capture_component(args.session_key, ), start_reactor=False)
 
     reactor.run()
 
