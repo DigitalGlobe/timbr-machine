@@ -28,7 +28,7 @@ def cooperative_consume(iter_noblock, cb):
                 yield cb(e)
     return cooperate(fn()).whenDone()
 
-def build_packager_component(kernel_key, conda_env="juno", env_path="/home/gremlin/anaconda/envs", pkg_path="/home/gremlin/environments"):
+def build_packager_component(kernel_key, conda_env, env_path="/home/gremlin/anaconda/envs", pkg_path="/home/gremlin/environments"):
     class WampPackagerComponent(ApplicationSession):
         def __init__(self, kernel_key, conda_env=conda_env, env_path=env_path, pkg_path=pkg_path, config=ComponentConfig(realm=u"jupyter")):
             ApplicationSession.__init__(self, config=config)
@@ -120,9 +120,9 @@ def build_packager_component(kernel_key, conda_env="juno", env_path="/home/greml
 
 
 def main():
-    global _project_realm, _packager_runner
+    global _packager_runner
     
-    log.startLogging(open("/home/gremlin/machine/log/pkgd.log", "w"))
+    log.startLogging(open("machine/log/pkgd.log", "w"))
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
@@ -141,7 +141,7 @@ def main():
     log.msg("Connecting to router: %s" % args.wamp_url)
     log.msg("  Project Realm: %s" % (args.wamp_realm))
 
-    _packager_runner.run(build_packager_component(args.session_key, ), start_reactor=False)
+    _packager_runner.run(build_packager_component(args.session_key, conda_env=args.env), start_reactor=False)
 
     reactor.run()
 
