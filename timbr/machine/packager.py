@@ -141,7 +141,7 @@ def main():
     log.msg("Connecting to router: %s" % args.wamp_url)
     log.msg("  Project Realm: %s" % (args.wamp_realm))
 
-    _packager_runner.run(build_capture_component(args.session_key, ), start_reactor=False)
+    _packager_runner.run(build_packager_component(args.session_key, ), start_reactor=False)
 
     reactor.run()
 
