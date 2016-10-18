@@ -227,6 +227,6 @@ class Machine(BaseMachine):
             if callable(_source):
                 _source = _source()
             machine.source = iter(_source)
-            machine._config = config
-            
+        
+        machine._config = config    
         return machine
