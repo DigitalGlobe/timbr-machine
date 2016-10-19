@@ -3,7 +3,7 @@ import JupyterReact from 'jupyter-react-js';
 let components = null;
 
 try {
-  components = require( '@timbr/react-machine' ).default;
+  components = require( '@timbr/react-machine' );
 } catch ( error ) {
   console.error( error );
 }
@@ -17,7 +17,7 @@ function load_ipython_extension () {
       const on_update = ( module, props, commId ) => {
         components.dispatcher.dispatch({
           actionType: module.toLowerCase() + '_update',
-          data: props,
+          data: Object.assign({}, props, { commId: commId }),
           commId
         });
       }
