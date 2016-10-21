@@ -31,7 +31,9 @@ The machine instance exposes a `put()` method that places any piece of data onto
 ### The Automatic Way
 
 ```Python
-MACHINE.set_source(generator)
+MACHINE.source = generator
+# call start after setting the source to being iteration and consumption
+MACHINE.start()
 ```
 
 If we have an iterator or generator interface to the data we can provide it to the machine and it will consume it automatically.  To do this we invoke the `set_source()` method.
