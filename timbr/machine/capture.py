@@ -259,8 +259,6 @@ def build_capture_component(kernel_key):
 def main():
     global _capture_runner
 
-    log.startLogging(open("machine/log/captd.log", "w"))
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
     parser.add_argument("--wamp-realm", default=u"jupyter", help='Router realm')
@@ -269,6 +267,7 @@ def main():
     parser.add_argument("--session-key", help="The kernel key that you want to register with")
     args = parser.parse_args()
 
+    log.startLogging(sys.stdout))
 
     _capture_runner = ApplicationRunner(url=unicode(args.wamp_url), realm=unicode(args.wamp_realm),
                                         headers={"Authorization": "Bearer {}".format(args.token),
