@@ -54,6 +54,12 @@ my_iterable = [1,2,3]
 MACHINE.source = my_iterable
 ```
 
+After setting our source, we need to start the Machine instance again:
+
+```Python
+MACHINE.start()
+```
+
 ## Configuring the Machine
 
 The default 8-step machine provides 8 function slots for configuring it's behavior.  By default each of these slots are set to an `identity` function that just passes the message through.  At the most basic level you can think of these functions as steps in a pipeline.  So the final output of the function would be `output = f7(f6(f5(f4(f3(f2(f1(f0))))))))`, though of course the machine would output all of the intermediate stages as well.
