@@ -31,10 +31,28 @@ The machine instance exposes a `put()` method that places any piece of data onto
 ### The Automatic Way
 
 ```Python
-MACHINE.set_source(generator)
+MACHINE.source = g
 ```
-
-If we have an iterator or generator interface to the data we can provide it to the machine and it will consume it automatically.  To do this we invoke the `set_source()` method.
+Here, we set the source to either an iterable or generator interface, or a function that returns a generator. For instance, g could be any of the following:
+*
+```Python
+# A function that returns a generator
+def my_generator_function():
+    yield "hello world"
+MACHINE.source = my_generator 
+```
+*
+```Python 
+# A generator instance
+my_generator = my_generator_function()
+MACHINE.source = my_generator
+```
+*
+```Python
+# An iterable instance
+my_iterable = [1,2,3]
+MACHINE.source = my_iterable
+```
 
 ## Configuring the Machine
 
