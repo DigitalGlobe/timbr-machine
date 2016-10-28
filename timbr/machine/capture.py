@@ -267,7 +267,7 @@ def main():
     parser.add_argument("--session-key", help="The kernel key that you want to register with")
     args = parser.parse_args()
 
-    log.startLogging(sys.stdout))
+    log.startLogging(sys.stdout)
 
     _capture_runner = ApplicationRunner(url=unicode(args.wamp_url), realm=unicode(args.wamp_realm),
                                         headers={"Authorization": "Bearer {}".format(args.token),

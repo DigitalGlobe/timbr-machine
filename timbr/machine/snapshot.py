@@ -354,7 +354,7 @@ def build_snapshot_component(kernel_key):
 def main():
     global _snapshot_runner
 
-    log.startLogging(open("machine/log/snapd.log", "w"))
+    log.startLogging(sys.stdout)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")

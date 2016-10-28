@@ -122,7 +122,7 @@ def build_packager_component(kernel_key, conda_env, env_path="/home/gremlin/anac
 def main():
     global _packager_runner
     
-    log.startLogging(open("machine/log/pkgd.log", "w"))
+    log.startLogging(sys.stdout)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
