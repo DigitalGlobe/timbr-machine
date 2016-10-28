@@ -143,11 +143,14 @@ class Machine(BaseMachine):
             return self._source_thread.g
 
     @source.setter
-    def source(self, iterable):
+    def source(self, source):
         if self._source_thread is not None:
             warnings.warn("Delete existing source before reassigning")
             return
-        self._source_thread = SourceConsumer(self, iterable)
+        if callable(source):
+            source = source()
+        source = iter(source)
+        self._source_thread = SourceConsumer(self, source))
 
     @source.deleter
     def source(self):
