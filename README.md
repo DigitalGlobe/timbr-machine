@@ -34,19 +34,19 @@ The machine instance exposes a `put()` method that places any piece of data onto
 MACHINE.source = g
 ```
 Here, we set the source to either an iterable or generator interface, or a function that returns a generator. For instance, g could be any of the following:
-*```Python
-# A function that returns a generator
+* A function that returns a generator
+```Python
 def my_generator_function():
     yield "hello world"
 MACHINE.source = my_generator 
 ```
-*```Python 
-# A generator instance
+* A generator instance
+```Python 
 my_generator = my_generator_function()
 MACHINE.source = my_generator
 ```
-*```Python
-# An iterable instance
+* An iterable instance
+```Python
 my_iterable = [1,2,3]
 MACHINE.source = my_iterable
 ```
