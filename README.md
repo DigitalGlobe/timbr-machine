@@ -39,7 +39,7 @@ Here, we set the source to either an iterable or generator interface, or a funct
 ```Python
 def my_generator_function():
     yield "hello world"
-MACHINE.source = my_generator 
+MACHINE.source = my_generator_function 
 ```
 
 * A generator instance
@@ -54,11 +54,20 @@ my_iterable = [1,2,3]
 MACHINE.source = my_iterable
 ```
 
-After setting our source, we need to start the Machine instance again:
+After setting our source, we need to start the Machine instance again to start automatic consumption of our source:
 
 ```Python
 MACHINE.start()
 ```
+
+In the event that we'd like to change the source that we're automatically consuming, we need to first manually remove any sources that we're already currently consuming:
+
+```Python 
+del MACHINE.source
+MACHINE.source = my_new_source
+```
+
+This is to protect against unintentionally interrupting a pre-configured running Machine instance. Reprogramming a machine slot with a new function (see below), however, is allowed at any time. 
 
 ## Configuring the Machine
 
