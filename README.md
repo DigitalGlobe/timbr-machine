@@ -65,6 +65,7 @@ In the event that we'd like to change the source that we're automatically consum
 ```Python 
 del MACHINE.source
 MACHINE.source = my_new_source
+MACHINE.start()
 ```
 
 This is to protect against unintentionally interrupting a pre-configured running Machine instance. Reprogramming a machine slot with a new function (see below), however, is allowed at any time. 
