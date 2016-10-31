@@ -150,7 +150,7 @@ class Machine(BaseMachine):
         if callable(source):
             source = source()
         source = iter(source)
-        self._source_thread = SourceConsumer(self, source))
+        self._source_thread = SourceConsumer(self, source)
 
     @source.deleter
     def source(self):
