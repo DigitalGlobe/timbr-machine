@@ -108,28 +108,42 @@ def build_capture_component(kernel_key):
             log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.subscriptions".format(self._kernel_key))
             yield self.register(subscriptions, 'io.timbr.kernel.{}.captures.subscriptions'.format(self._kernel_key))
 
-            def subscribe(key, structure_level=0):
+            def subscribe(key=None, structure_level=0):
                 assert re.match("[_A-Za-z][_a-zA-Z0-9]*", key)
                 assert not keyword.iskeyword(key)
 
-                if key in self._subscriptions:
-                    if self._subscriptions[key]:
-                        return False
+                if key is not None:
+                    assert re.match("[_A-Za-z][_a-zA-Z0-0]*", key)
+                    assert not keyword.iskeyword(key)
+                    if key in self._subscriptions:
+                        if self._subscriptions[key]:
+                            return False
+                        else:
+                            self._subscriptions[key] = True
+                            return True
                     else:
+                        self._datastore.create(key)
                         self._subscriptions[key] = True
                         return True
+                # key=None turns on 'omni-capture'
                 else:
-                    self._datastore.create(key)
-                    self._subscriptions[key] = True
+                    for key in self._subscriptions:
+                        self._subscriptions[key] = True
                     return True
 
             log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.subscribe".format(self._kernel_key))
             yield self.register(subscribe, 'io.timbr.kernel.{}.captures.subscribe'.format(self._kernel_key))
 
-            def unsubscribe(key):
-                if key in self._subscriptions and self._subscriptions[key]:
-                    self._datastore.checkpoint(key)
-                    self._subscriptions[key] = False
+            def unsubscribe(key=None):
+                if key is not None:
+                    if key in self._subscriptions and self._subscriptions[key]:
+                        self._datastore.checkpoint(key)
+                        self._subscriptions[key] = False
+                else:
+                    # key=None turns off 'omni-capture'
+                    for key in self._subscriptions:
+                        self._datastore.checkpoint(key)
+                        self._subscriptions[key] = False
 
             log.msg("[WampCaptureComponent] Registering Procedure: io.timbr.kernel.{}.captures.unsubscribe".format(self._kernel_key))
             yield self.register(unsubscribe, 'io.timbr.kernel.{}.captures.unsubscribe'.format(self._kernel_key))
