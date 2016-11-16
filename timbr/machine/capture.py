@@ -109,9 +109,6 @@ def build_capture_component(kernel_key):
             yield self.register(subscriptions, 'io.timbr.kernel.{}.captures.subscriptions'.format(self._kernel_key))
 
             def subscribe(key=None, structure_level=0):
-                assert re.match("[_A-Za-z][_a-zA-Z0-9]*", key)
-                assert not keyword.iskeyword(key)
-
                 if key is not None:
                     assert re.match("[_A-Za-z][_a-zA-Z0-0]*", key)
                     assert not keyword.iskeyword(key)
