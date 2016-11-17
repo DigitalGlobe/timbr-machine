@@ -31,6 +31,7 @@ class MachineConsumer(StoppableThread):
         super(MachineConsumer, self).__init__()
         self.machine = machine
         self._socket = None
+        self.paused = False
         # set local kernel key
         try:
             with open(get_ipython().config["IPKernelApp"]["connection_file"]) as f:
@@ -51,41 +52,44 @@ class MachineConsumer(StoppableThread):
 
     def run(self):
         while not self.stopped():
-            try:
-                # NOTE: self.get should never throw exceptions from inside the dask
-                output = self.machine.get(block=True, timeout=0.1)
-                hdr = output[0]
-                msg = "[{}]".format(",".join(output[1:]))
-                payload = [hdr, msg.encode("utf-8")]
-                self.machine._status['last_oid'] = hdr
-                self.machine._status['processed'] = self.machine._status['processed'] + 1
-                self.machine._data_prev.append(payload)
-                self._socket.send_multipart(payload)
-            except Empty: # This is an instance of RemoteException, so needs to be caught first
-                continue
-            except dask.async.RemoteException as re: 
-                # re derives from dask's RemoteException
-                output = self.machine._build_output_on_error(re)
-                hdr = output[0]
-                msg = "[{}]".format(",".join(output[1:]))
-                payload = [hdr, msg.encode("utf-8")]
-                self.machine._status['errored'] = self.machine._status['errored'] + 1
-                self.machine._error_prev.append(payload)
-                self._socket.send_multipart(payload)
-                if self.machine._debug:
-                    raise
+            if not self.paused:
+                try:
+                    # NOTE: self.get should never throw exceptions from inside the dask
+                    output = self.machine.get(block=True, timeout=0.1)
+                    hdr = output[0]
+                    msg = "[{}]".format(",".join(output[1:]))
+                    payload = [hdr, msg.encode("utf-8")]
+                    self.machine._status['last_oid'] = hdr
+                    self.machine._status['processed'] = self.machine._status['processed'] + 1
+                    self.machine._data_prev.append(payload)
+                    self._socket.send_multipart(payload)
+                except Empty: # This is an instance of RemoteException, so needs to be caught first
+                    continue
+                except dask.async.RemoteException as re: 
+                    # re derives from dask's RemoteException
+                    output = self.machine._build_output_on_error(re)
+                    hdr = output[0]
+                    msg = "[{}]".format(",".join(output[1:]))
+                    payload = [hdr, msg.encode("utf-8")]
+                    self.machine._status['errored'] = self.machine._status['errored'] + 1
+                    self.machine._error_prev.append(payload)
+                    self._socket.send_multipart(payload)
+                    if self.machine._debug:
+                        raise
 
 class SourceConsumer(StoppableThread):
     def __init__(self, machine, iterable):
         super(SourceConsumer, self).__init__()
         self.g = iterable
         self.machine = machine
+        self._exhausted = False # naive
+        self._full = False # naive
         self._error = {}
         self._status = {}
         
     @property
     def status(self):
-        _status = {"running": not self.stopped()}
+        _status = {"running": not self.stopped(), "exhausted": self._exhausted, "full": self._full}
         _status.update(self._error)
         return _status
 
@@ -96,7 +100,11 @@ class SourceConsumer(StoppableThread):
                 # which will interrupt the source
                 msg = self.g.next()
                 self.machine.put(msg)
-            except (StopIteration, Full):
+            except (StopIteration, Full) as e:
+                if isinstance(e, StopIteration):
+                    self._exhausted = True
+                else:
+                    self._full = True
                 self.stop()
                 break
             except Exception as e:
@@ -120,24 +128,41 @@ class Machine(BaseMachine):
 
     @event
     def start(self):
-        if not self.running:
+        if self._consumer_thread is None or not self._consumer_thread.is_alive():
             self._profiler.register()
             self._consumer_thread = MachineConsumer(self)
             self._consumer_thread.start()
+        elif self._consumer_thread.paused:
+            self._consumer_thread.paused = False
+        
         if self._source_thread is not None and not self._source_thread.is_alive():
-            self._source_thread.start()
-
+            # Try to reassign the iterator to a new consumer if we think we can call .next() again: 
+            status = self._source_thread.status
+            if not (status.get("exhausted") or status.get("full") or status.get("serialized_exception") is not None):
+                g = self.source
+                del self.source
+                self.source = g
+                self._source_thread.start()
+                status = self._source_thread.status
+            return status
     @event
-    def stop(self):
-        self._consumer_thread.stop()
-        self._consumer_thread.join(timeout=1.0)
-        try:
-            self._profiler.unregister()
-        except KeyError as ke:
-            pass
-        if self._source_thread is not None:
+    def stop(self, clear_buffer=True, hard_stop=False):
+        if hard_stop:
+            self._consumer_thread.stop()
+            self._consumer_thread.join(timeout=1.0)
+            try:
+                self._profiler.unregister()
+            except KeyError as ke:
+                pass
+        else:
+            self._consumer_thread.paused = True
+
+        if self._source_thread is not None and self._source_thread.is_alive():
             self._source_thread.stop()
             self._source_thread.join(timeout=1.0)
+
+        if clear_buffer:
+            self.q._init(self._bufsize)
 
     @property
     def source(self):
