@@ -48,6 +48,7 @@ def is_serialization_task(task):
 class BaseMachine(object):
     def __init__(self, stages=8, bufsize=1024, serialize_fn=json_serialize):
         self.q = Queue(bufsize)
+        self._bufsize = bufsize
         self.tbl = {}
         self._status = {"last_oid": None, "processed": 0, "errored": 0, "queue_size": self.q.qsize()}
         self.stages = stages
@@ -62,7 +63,7 @@ class BaseMachine(object):
             "in_s": (self.serialize_fn, "in")
         }
         self.REFERENCE_DASK.update({"f{}_s".format(i): (self.serialize_fn, "f{}".format(i)) for i in xrange(self.stages)})
-
+    
     def put(self, msg):
         # NOTE: Non-blocking
         self.q.put(msg, False)
