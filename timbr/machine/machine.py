@@ -107,7 +107,7 @@ class SourceConsumer(StoppableThread):
                 raise
 
 class Machine(BaseMachine):
-    def __init__(self, stages=8, bufsize=1024, debug=False):
+    def __init__(self, stages=8, bufsize=1024, start_consumer=True, debug=False):
         super(Machine, self).__init__(stages, bufsize)
         self._consumer_thread = None
         self._data_prev = deque(maxlen=10)
@@ -115,6 +115,8 @@ class Machine(BaseMachine):
         self._profiler = MachineProfiler()
         self._debug = debug
         self._source_thread = None
+        if start_consumer:
+            self.start()
 
     @event
     def start(self):
@@ -161,9 +163,9 @@ class Machine(BaseMachine):
     
     @property
     def running(self):
-        if self._consumer_thread is None:
+        if self._source_thread is None:
             return False
-        return self._consumer_thread.is_alive()
+        return self._source_thread.is_alive()
 
     @property
     def debug(self):
