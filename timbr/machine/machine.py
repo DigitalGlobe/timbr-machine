@@ -91,7 +91,7 @@ class SourceConsumer(StoppableThread):
         
     @property
     def status(self):
-        _status = {"running": not self.stopped(), "exhausted": self._exhausted, "full": self._full}
+        _status = {"running": self.is_alive(), "exhausted": self._exhausted, "full": self._full}
         _status.update(self._error)
         return _status
 
@@ -139,17 +139,21 @@ class Machine(BaseMachine):
             self._consumer_lock.release()
         except ThreadError as te:
             pass
-        
+       
         if self._source_thread is not None and not self._source_thread.is_alive():
-            # Try to reassign the iterator to a new consumer if we think we can call .next() again: 
-            status = self._source_thread.status
-            if not (status.get("exhausted") or status.get("full") or status.get("serialized_exception") is not None):
-                g = self.source
-                del self.source
-                self.source = g
+            try:
                 self._source_thread.start()
+                return self._source_thread.status
+            except RuntimeError as re: # The thread has already been started and has been stopped for some reason
                 status = self._source_thread.status
-            return status
+                if not (status.get("exhausted") or status.get("full") or status.get("serialized_exception") is not None):
+                    g = self.source # Attempt to restart the source generator in a new thread if we can, otherwise do nothing
+                    del self.source
+                    self.source = g
+                    self._source_thread.start()
+                    status = self._source_thread.status
+                return status
+
     @event
     def stop(self, clear_buffer=True, hard_stop=False):
         self._consumer_lock.acquire() # pause consumer thread
