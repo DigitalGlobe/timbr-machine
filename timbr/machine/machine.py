@@ -1,5 +1,5 @@
 import dask.async
-from threading import Thread
+from threading import Thread, Lock, ThreadError
 import time
 import json
 
@@ -31,7 +31,7 @@ class MachineConsumer(StoppableThread):
         super(MachineConsumer, self).__init__()
         self.machine = machine
         self._socket = None
-        self.paused = False
+        self._lock = Lock()
         # set local kernel key
         try:
             with open(get_ipython().config["IPKernelApp"]["connection_file"]) as f:
@@ -52,30 +52,32 @@ class MachineConsumer(StoppableThread):
 
     def run(self):
         while not self.stopped():
-            if not self.paused:
-                try:
-                    # NOTE: self.get should never throw exceptions from inside the dask
-                    output = self.machine.get(block=True, timeout=0.1)
-                    hdr = output[0]
-                    msg = "[{}]".format(",".join(output[1:]))
-                    payload = [hdr, msg.encode("utf-8")]
-                    self.machine._status['last_oid'] = hdr
-                    self.machine._status['processed'] = self.machine._status['processed'] + 1
-                    self.machine._data_prev.append(payload)
-                    self._socket.send_multipart(payload)
-                except Empty: # This is an instance of RemoteException, so needs to be caught first
-                    continue
-                except dask.async.RemoteException as re: 
-                    # re derives from dask's RemoteException
-                    output = self.machine._build_output_on_error(re)
-                    hdr = output[0]
-                    msg = "[{}]".format(",".join(output[1:]))
-                    payload = [hdr, msg.encode("utf-8")]
-                    self.machine._status['errored'] = self.machine._status['errored'] + 1
-                    self.machine._error_prev.append(payload)
-                    self._socket.send_multipart(payload)
-                    if self.machine._debug:
-                        raise
+            self._lock.acquire()
+            try:
+                # NOTE: self.get should never throw exceptions from inside the dask
+                output = self.machine.get(block=True, timeout=0.1)
+                hdr = output[0]
+                msg = "[{}]".format(",".join(output[1:]))
+                payload = [hdr, msg.encode("utf-8")]
+                self.machine._status['last_oid'] = hdr
+                self.machine._status['processed'] = self.machine._status['processed'] + 1
+                self.machine._data_prev.append(payload)
+                self._socket.send_multipart(payload)
+            except Empty: # This is an instance of RemoteException, so needs to be caught first
+                continue
+            except dask.async.RemoteException as re: 
+                # re derives from dask's RemoteException
+                output = self.machine._build_output_on_error(re)
+                hdr = output[0]
+                msg = "[{}]".format(",".join(output[1:]))
+                payload = [hdr, msg.encode("utf-8")]
+                self.machine._status['errored'] = self.machine._status['errored'] + 1
+                self.machine._error_prev.append(payload)
+                self._socket.send_multipart(payload)
+                if self.machine._debug:
+                    raise
+            finally:
+                self._lock.release()
 
 class SourceConsumer(StoppableThread):
     def __init__(self, machine, iterable):
@@ -117,6 +119,7 @@ class SourceConsumer(StoppableThread):
 class Machine(BaseMachine):
     def __init__(self, stages=8, bufsize=1024, start_consumer=True, debug=False):
         super(Machine, self).__init__(stages, bufsize)
+        self._consumer_lock = Lock()
         self._consumer_thread = None
         self._data_prev = deque(maxlen=10)
         self._error_prev = deque(maxlen=10)
@@ -132,8 +135,10 @@ class Machine(BaseMachine):
             self._profiler.register()
             self._consumer_thread = MachineConsumer(self)
             self._consumer_thread.start()
-        elif self._consumer_thread.paused:
-            self._consumer_thread.paused = False
+        try: # Un-pause consumer if paused
+            self._consumer_lock.release()
+        except ThreadError as te:
+            pass
         
         if self._source_thread is not None and not self._source_thread.is_alive():
             # Try to reassign the iterator to a new consumer if we think we can call .next() again: 
@@ -147,6 +152,7 @@ class Machine(BaseMachine):
             return status
     @event
     def stop(self, clear_buffer=True, hard_stop=False):
+        self._consumer_lock.acquire() # pause consumer thread
         if hard_stop:
             self._consumer_thread.stop()
             self._consumer_thread.join(timeout=1.0)
@@ -154,8 +160,6 @@ class Machine(BaseMachine):
                 self._profiler.unregister()
             except KeyError as ke:
                 pass
-        else:
-            self._consumer_thread.paused = True
 
         if self._source_thread is not None and self._source_thread.is_alive():
             self._source_thread.stop()
