@@ -1,5 +1,5 @@
 import dask.async
-from threading import Thread, Lock, ThreadError
+from threading import Thread, Lock, Event, ThreadError
 import time
 import json
 
@@ -31,8 +31,9 @@ class MachineConsumer(StoppableThread):
         super(MachineConsumer, self).__init__()
         self.machine = machine
         self._socket = None
-        self._lock = Lock()
-        # set local kernel key
+        self._trigger = Event()
+        self.trigger()
+       # set local kernel key
         try:
             with open(get_ipython().config["IPKernelApp"]["connection_file"]) as f:
                 config = json.load(f)
@@ -45,6 +46,15 @@ class MachineConsumer(StoppableThread):
         mkdir_p("/tmp/timbr-machine") # NOTE: Not Windows Safe (but should be)
         self.initialize_pub_stream("ipc:///tmp/timbr-machine/{}".format(self._kernel_key))
 
+    def trigger(self):
+         self._trigger.set()
+            
+    def pause(self):
+        self._trigger.clear()
+
+    def paused(self):
+        return not self._trigger.isSet()
+        
     def initialize_pub_stream(self, endpoint):
         ctx = zmq.Context()
         self._socket = ctx.socket(zmq.PUB)
@@ -52,7 +62,7 @@ class MachineConsumer(StoppableThread):
 
     def run(self):
         while not self.stopped():
-            self._lock.acquire()
+            self._trigger.wait() # Wait for this flag to be set to Fal
             try:
                 # NOTE: self.get should never throw exceptions from inside the dask
                 output = self.machine.get(block=True, timeout=0.1)
@@ -76,8 +86,6 @@ class MachineConsumer(StoppableThread):
                 self._socket.send_multipart(payload)
                 if self.machine._debug:
                     raise
-            finally:
-                self._lock.release()
 
 class SourceConsumer(StoppableThread):
     def __init__(self, machine, iterable):
@@ -119,7 +127,6 @@ class SourceConsumer(StoppableThread):
 class Machine(BaseMachine):
     def __init__(self, stages=8, bufsize=1024, start_consumer=True, debug=False):
         super(Machine, self).__init__(stages, bufsize)
-        self._consumer_lock = Lock()
         self._consumer_thread = None
         self._data_prev = deque(maxlen=10)
         self._error_prev = deque(maxlen=10)
@@ -135,10 +142,9 @@ class Machine(BaseMachine):
             self._profiler.register()
             self._consumer_thread = MachineConsumer(self)
             self._consumer_thread.start()
-        try: # Un-pause consumer if paused
-            self._consumer_lock.release()
-        except ThreadError as te:
-            pass
+        # Unpause consumer if paused:
+        if self._consumer_thread.paused():
+            self._consumer_thread.trigger()
        
         if self._source_thread is not None and not self._source_thread.is_alive():
             try:
@@ -156,14 +162,15 @@ class Machine(BaseMachine):
 
     @event
     def stop(self, clear_buffer=True, hard_stop=False):
-        self._consumer_lock.acquire() # pause consumer thread
-        if hard_stop:
-            self._consumer_thread.stop()
-            self._consumer_thread.join(timeout=1.0)
-            try:
-                self._profiler.unregister()
-            except KeyError as ke:
-                pass
+        if self._consumer_thread is not None and self._consumer_thread.is_alive():
+            self._consumer_thread.pause() # pause consumer thread
+            if hard_stop:
+                self._consumer_thread.stop()
+                self._consumer_thread.join(timeout=1.0)
+                try:
+                    self._profiler.unregister()
+                except KeyError as ke:
+                    pass
 
         if self._source_thread is not None and self._source_thread.is_alive():
             self._source_thread.stop()
