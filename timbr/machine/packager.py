@@ -94,7 +94,6 @@ def build_packager_component(kernel_key, conda_env, env_path="/home/gremlin/anac
 
             @inlineCallbacks
             def package_environment(pkg_name, details=None):
-
                 @inlineCallbacks
                 def package():
                     pkg_filepath = os.path.join(self._pkg_path, "%s.yaml" %(pkg_name))
@@ -111,7 +110,7 @@ def build_packager_component(kernel_key, conda_env, env_path="/home/gremlin/anac
         def onLeave(self, details):
             log.msg("[WampPackagerComponent] onLeave()" )
             log.msg("details: %s" % str(details))
-            reactor.callLater(0.25, _packager_runner.run, WampPackagerComponent, start_reactor=False)
+            reactor.callLater(0.25, _packager_runner.run, build_packager_component(self._kernel_key, self._conda_env), start_reactor=False)
 
         def onDisconnect(self):
             log.msg("[WampPackagerComponent] onDisconnect()")

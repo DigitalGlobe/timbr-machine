@@ -301,7 +301,7 @@ def build_snapshot_component(kernel_key):
         def onLeave(self, details):
             log.msg("[WampSnapshotComponent] onLeave()")
             log.msg("details: %s" % str(details))
-            reactor.callLater(0.25, _snapshot_runner.run, WampSnapshotComponent, start_reactor=False)
+            reactor.callLater(0.25, _snapshot_runner.run, build_snapshot_component(self._kernel_key), start_reactor=False)
 
         def onDisconnect(self):
             log.msg("WampSnapshotComponent] onDisconnect()")

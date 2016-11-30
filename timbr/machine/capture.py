@@ -258,10 +258,10 @@ def build_capture_component(kernel_key):
             self._flush()
             log.msg("[WampCaptureComponent] onLeave()")
             log.msg("details: %s" % str(details))
-            reactor.callLater(0.25, _capture_runner.run, WampCaptureComponent, start_reactor=False)
+            reactor.callLater(0.25, _capture_runner.run, build_capture_component(self._kernel_key), start_reactor=False)
 
         def onDisconnect(self):
-            log.msg("[WampCaptureComponent] onDisconnect")
+            log.msg("[WampCaptureComponent] onDisconect")
 
     return WampCaptureComponent(kernel_key)
 
