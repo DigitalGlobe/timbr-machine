@@ -195,8 +195,7 @@ class Machine(BaseMachine):
 
     @source.deleter
     def source(self):
-        if self._source_thread is not None and not self._source_thread.is_alive():
-            self._source_thread.stop()
+        self._source_thread.stop()
         self._source_thread = None
     
     @property
