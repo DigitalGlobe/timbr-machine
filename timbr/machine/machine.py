@@ -149,7 +149,7 @@ class Machine(BaseMachine):
         if self._source_thread is not None and not self._source_thread.is_alive():
             try:
                 self._source_thread.start()
-                return self._source_thread.status
+                return
             except RuntimeError as re: # The thread has already been started and has been stopped for some reason
                 status = self._source_thread.status
                 if not (status.get("exhausted") or status.get("full") or status.get("serialized_exception") is not None):
@@ -157,8 +157,7 @@ class Machine(BaseMachine):
                     del self.source
                     self.source = g
                     self._source_thread.start()
-                    status = self._source_thread.status
-                return status
+                return
 
     @event
     def stop(self, clear_buffer=True, hard_stop=False):
@@ -198,7 +197,6 @@ class Machine(BaseMachine):
     def source(self):
         if self._source_thread is not None and not self._source_thread.is_alive():
             self._source_thread.stop()
-            self._source_thread.join(timeout=1.0)
         self._source_thread = None
     
     @property
