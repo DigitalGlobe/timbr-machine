@@ -244,7 +244,7 @@ def build_capture_component(kernel_key):
                     snap.create_group(snap.root, "tables")
                     for segment in segments:
                         yield cooperate(generate(raw, key, segment)).whenDone()
-                        details.progress({"capture_key": key, "status": True})
+                        yield details.progress({"capture_key": key, "status": True})
                         raw.flush()
                     snap.flush()
                     snap.close()
