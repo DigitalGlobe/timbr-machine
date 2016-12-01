@@ -84,7 +84,7 @@ class BaseMachine(object):
 
     def create_dispatcher(self):
         if self.dispatcher is not None:
-            del self.dispatcher
+            self.dispatcher.comm.close()
         self.dispatcher = Dispatcher(self)
 
     def dispatch(self, msg):
