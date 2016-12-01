@@ -29,6 +29,7 @@ from timbr.machine.exception import UpstreamError
 from timbr.machine.display import Display
 from timbr.machine.dashboard import Dashboard
 from timbr.machine.editor import Editor
+from timbr.machine.dispatcher import Dispatcher
 
 def json_serialize(obj):
     try:
@@ -55,6 +56,7 @@ class BaseMachine(object):
         self._dsk = None
         self._dirty = True
         self._getter = partial(get, num_workers=1)
+        self.dispatcher = None
 
         self.serialize_fn = serialize_fn
 
@@ -79,6 +81,13 @@ class BaseMachine(object):
 
     def dashboard(self):
         self._dashboard = Dashboard(self)
+
+    def create_dispatcher(self):
+        self.dispatcher = Dispatcher(self)
+
+    def dispatch(self, msg):
+        if self.dispatcher is not None:
+            self.dispatcher.dispatch(msg)
 
     def editor(self):
         self._editor = Editor(self)
