@@ -12,4 +12,4 @@ class Dispatcher(Component):
         self._module = module
 
     def dispatch(self, msg):
-        self.send({'method': 'dispatch', 'props': msg})
+        self.send( msg )
