@@ -8,7 +8,6 @@ class Dispatcher(Component):
     """
     def __init__(self, module=None, **kwargs):
         super(Dispatcher, self).__init__(target_name='timbr.machine', **kwargs)
-        self.on_msg(self._handle_msg)
         self._module = module
 
     def dispatch(self, msg):
