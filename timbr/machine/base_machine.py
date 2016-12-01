@@ -83,6 +83,8 @@ class BaseMachine(object):
         self._dashboard = Dashboard(self)
 
     def create_dispatcher(self):
+        if self.dispatcher is not None:
+            del self.dispatcher
         self.dispatcher = Dispatcher(self)
 
     def dispatch(self, msg):
