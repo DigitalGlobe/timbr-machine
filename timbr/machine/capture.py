@@ -56,20 +56,20 @@ class CaptureConnection(ZmqSubConnection):
     def _capture(self, msg, hdr):
         if self._capturing():
             oid = re.findall(self._oid_pattern, hdr)[0]
-            mapped = _map_message(serializer.loads(msg)) 
+            mapped = _map_message(serializer.loads(msg))
 
             for key, capturing in [(k, v) for k, v in self._subscriptions.items() if v or self._track_stack]:
                 if capturing:
                     data = mapped.get(key)
                 else:
                     data = None
-                
+
                 payload = "%s%s" % (serializer.dumps(hdr), serializer.dumps(data))
                 self._datastore.append(key, payload, oid)
 
 def build_capture_component(kernel_key):
     class WampCaptureComponent(ApplicationSession):
-        def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="/home/gremlin/project/data/.capture", 
+        def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="/home/gremlin/project/data/.capture",
                         base_endpoint="ipc:///tmp/timbr-machine/", tracks=8, track_stack=False):
             ApplicationSession.__init__(self, config=config)
             self._kernel_key = kernel_key
@@ -194,7 +194,7 @@ def build_capture_component(kernel_key):
                     rowcount = self._datastore.nrows(key, current_segment)
                     if rowcount > current_rowcount:
                         current_rowcount = yield rowcount
-                        details.progress({"name": current_segment, "rows": current_rowcount})
+                        yield details.progress({"name": current_segment, "rows": current_rowcount})
                     yield sleep(0.5)
                 returnValue(None)
 
@@ -291,5 +291,3 @@ def main():
     _capture_runner.run(build_capture_component(args.session_key), start_reactor=False)
 
     reactor.run()
-
-
