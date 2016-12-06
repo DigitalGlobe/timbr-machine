@@ -25,6 +25,20 @@ import sys
 import traceback
 import imp
 
+levels = ["ERROR", "WARNING", "INFO"]
+
+def _get_traceback():
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    tb = traceback.format_exception(exc_type, exc_value, exc_traceback)
+    return tb
+
+def _format_dispatch_emsg(inst, level="ERROR", **kwargs):
+    m = {}
+    m["origin"] = inst.__class__
+    m["level"] = level
+    msg = {"content": {"data": {"content": {}}}}
+    msg["content"]["data"]["content"].update(m)
+    return msg
 
 class MachineConsumer(StoppableThread):
     def __init__(self, machine, kernel_key=None):
@@ -60,6 +74,17 @@ class MachineConsumer(StoppableThread):
         self._socket = ctx.socket(zmq.PUB)
         self._socket.bind(endpoint)
 
+    def _dispatch_err(self, e, **kwargs):
+        m = {"location": self.machine._profiler._errored}
+        m["exc_class"] = str(e.__class__)
+        m["exc_type"] = str(e.exception.__class__)
+        m["exc_tb"] = e.traceback
+        m["exc_value"] = e.__repr__()
+        dmsg = _format_dispatch_emsg(self, **kwargs)
+        emsg = {"exception": m}
+        dmsg["content"]["data"]["content"].update(emsg)
+        self.machine.dispatch(self.machine.serialize_fn(dmsg))
+
     def run(self):
         while not self.stopped():
             self._trigger.wait() # Wait for this flag to be set to Fal
@@ -84,6 +109,7 @@ class MachineConsumer(StoppableThread):
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
                 self.machine._error_prev.append(payload)
                 self._socket.send_multipart(payload)
+                self._dispatch_err(re)
                 if self.machine._debug:
                     raise
 
@@ -103,7 +129,16 @@ class SourceConsumer(StoppableThread):
         _status.update(self._error)
         return _status
 
-
+    def _dispatch_err(self, e, **kwargs):
+        m = {}
+        m["exc_class"] = str(e.__class__)
+        m["exc_type"] = str(type(e))
+        m["exc_tb"] = _get_traceback()
+        m["exc_value"] = e.__repr__()
+        dmsg = _format_dispatch_emsg(self, **kwargs)
+        emsg = {"exception": m}
+        dmsg["content"]["data"]["content"].update(emsg)
+        self.machine.dispatch(self.machine.serialize_fn(dmsg))
 
     def run(self):
         while not self.stopped():
@@ -118,10 +153,12 @@ class SourceConsumer(StoppableThread):
                     self._exhausted = True
                 else:
                     self._full = True
-                self.machine._dispatch_error(e)
+                self._dispatch_err(e, level="INFO")
                 self.stop()
                 break
             except Exception as e:
+                self._dispatch_err(e)
+                tb = _get_traceback
                 self._error = {"serialized_exception": self.machine.serialize_fn(json_serializable_exception(e, _traceback=tb))}
                 self.stop()
                 raise
@@ -237,10 +274,8 @@ class Machine(BaseMachine):
                     output.append(self.serialize_fn(formatter(UpstreamError(fn_s))))
         return output
 
-    def _handle_error(self, e):
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        tb = traceback.format_exception(exc_type, exc_value, exc_traceback)
 
+        return self.serialize_fn(json_serializable_exception(e, _traceback=tb, **kwargs))
 
     @classmethod
     def from_json(cls, config_path, init_path=None, **kwargs):
