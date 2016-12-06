@@ -21,7 +21,7 @@ from collections import deque
 from observed import event
 import warnings
 import os
-import sys 
+import sys
 import traceback
 import imp
 
@@ -48,13 +48,13 @@ class MachineConsumer(StoppableThread):
 
     def trigger(self):
          self._trigger.set()
-            
+
     def pause(self):
         self._trigger.clear()
 
     def paused(self):
         return not self._trigger.isSet()
-        
+
     def initialize_pub_stream(self, endpoint):
         ctx = zmq.Context()
         self._socket = ctx.socket(zmq.PUB)
@@ -75,7 +75,7 @@ class MachineConsumer(StoppableThread):
                 self._socket.send_multipart(payload)
             except Empty: # This is an instance of RemoteException, so needs to be caught first
                 continue
-            except dask.async.RemoteException as re: 
+            except dask.async.RemoteException as re:
                 # re derives from dask's RemoteException
                 output = self.machine._build_output_on_error(re)
                 hdr = output[0]
@@ -96,12 +96,14 @@ class SourceConsumer(StoppableThread):
         self._full = False # naive
         self._error = {}
         self._status = {}
-        
+
     @property
     def status(self):
         _status = {"running": self.is_alive(), "exhausted": self._exhausted, "full": self._full}
         _status.update(self._error)
         return _status
+
+
 
     def run(self):
         while not self.stopped():
@@ -111,18 +113,19 @@ class SourceConsumer(StoppableThread):
                 msg = self.g.next()
                 self.machine.put(msg)
             except (StopIteration, Full) as e:
+                errored = True
                 if isinstance(e, StopIteration):
                     self._exhausted = True
                 else:
                     self._full = True
+                self.machine._dispatch_error(e)
                 self.stop()
                 break
             except Exception as e:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                tb = traceback.format_exception(exc_type, exc_value, exc_traceback )
                 self._error = {"serialized_exception": self.machine.serialize_fn(json_serializable_exception(e, _traceback=tb))}
                 self.stop()
                 raise
+
 
 class Machine(BaseMachine):
     def __init__(self, stages=8, bufsize=1024, start_consumer=True, debug=False):
@@ -138,6 +141,7 @@ class Machine(BaseMachine):
 
     @event
     def start(self):
+        self.create_dispatcher()
         if self._consumer_thread is None or not self._consumer_thread.is_alive():
             self._profiler.register()
             self._consumer_thread = MachineConsumer(self)
@@ -145,7 +149,7 @@ class Machine(BaseMachine):
         # Unpause consumer if paused:
         if self._consumer_thread.paused():
             self._consumer_thread.trigger()
-       
+
         if self._source_thread is not None and not self._source_thread.is_alive():
             try:
                 self._source_thread.start()
@@ -199,7 +203,7 @@ class Machine(BaseMachine):
             self._source_thread.stop()
             self._source_thread.join(timeout=1.0)
         self._source_thread = None
-    
+
     @property
     def running(self):
         if self._source_thread is None:
@@ -233,6 +237,11 @@ class Machine(BaseMachine):
                     output.append(self.serialize_fn(formatter(UpstreamError(fn_s))))
         return output
 
+    def _handle_error(self, e):
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        tb = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+
     @classmethod
     def from_json(cls, config_path, init_path=None, **kwargs):
         with open(config_path, "r") as f:
@@ -242,21 +251,21 @@ class Machine(BaseMachine):
 
         def load_machine(init_path):
             pkg_path, init = os.path.split(init_path)
-        
+
             sys.path.append(pkg_path)
-            _mod = imp.load_source("_machine_mod", init_path) 
+            _mod = imp.load_source("_machine_mod", init_path)
             sys.path.pop()
 
             exclude = set(['__builtins__', '__doc__', '__file__', '__name__', '__package__',])
             for mod in set(dir(_mod)).difference(exclude):
                 m = getattr(_mod, mod)
                 setattr(main, mod, m)
-        
+
         if init_path is not None:
             load_machine(init_path)
         elif config.get("init") is not None:
             load_machine(config["init"])
-            
+
         _stages = max(8, len(config["functions"]))
         machine = cls(stages=_stages, **kwargs)
 
@@ -271,6 +280,6 @@ class Machine(BaseMachine):
             if callable(_source):
                 _source = _source()
             machine.source = iter(_source)
-        
-        machine._config = config    
+
+        machine._config = config
         return machine
