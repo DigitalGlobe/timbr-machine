@@ -34,7 +34,7 @@ def _get_traceback():
 
 def _format_dispatch_emsg(inst, level="ERROR", **kwargs):
     m = {}
-    m["origin"] = inst.__class__
+    m["origin"] = str(inst)
     m["level"] = level
     msg = {"content": {"data": {"content": {}}}}
     msg["content"]["data"]["content"].update(m)
@@ -47,6 +47,7 @@ class MachineConsumer(StoppableThread):
         self._socket = None
         self._trigger = Event()
         self.trigger()
+        self._dispatched = []
        # set local kernel key
         try:
             with open(get_ipython().config["IPKernelApp"]["connection_file"]) as f:
@@ -59,6 +60,9 @@ class MachineConsumer(StoppableThread):
                 self._kernel_key = str(ObjectId())
         mkdir_p("/tmp/timbr-machine") # NOTE: Not Windows Safe (but should be)
         self.initialize_pub_stream("ipc:///tmp/timbr-machine/{}".format(self._kernel_key))
+
+    def __str__(self):
+        return "MachineConsumer"
 
     def trigger(self):
          self._trigger.set()
@@ -123,6 +127,9 @@ class SourceConsumer(StoppableThread):
         self._error = {}
         self._status = {}
 
+    def __str__(self):
+        return "SourceConsumer"
+
     @property
     def status(self):
         _status = {"running": self.is_alive(), "exhausted": self._exhausted, "full": self._full}
@@ -131,6 +138,7 @@ class SourceConsumer(StoppableThread):
 
     def _dispatch_err(self, e, **kwargs):
         m = {}
+        m["location"] = "source"
         m["exc_class"] = str(e.__class__)
         m["exc_type"] = str(type(e))
         m["exc_tb"] = _get_traceback()
