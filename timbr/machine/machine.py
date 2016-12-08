@@ -36,8 +36,8 @@ def _format_dispatch_emsg(inst, level="ERROR", **kwargs):
     m = {}
     m["origin"] = str(inst)
     m["level"] = level
-    msg = {"content": {"data": {"content": {}}}}
-    msg["content"]["data"]["content"].update(m)
+    msg = {}
+    msg.update(m)
     return msg
 
 class MachineConsumer(StoppableThread):
@@ -86,7 +86,7 @@ class MachineConsumer(StoppableThread):
         m["exc_value"] = e.__repr__()
         dmsg = _format_dispatch_emsg(self, **kwargs)
         emsg = {"exception": m}
-        dmsg["content"]["data"]["content"].update(emsg)
+        dmsg.update(emsg)
         self.machine.dispatch(self.machine.serialize_fn(dmsg))
 
     def run(self):
@@ -145,7 +145,7 @@ class SourceConsumer(StoppableThread):
         m["exc_value"] = e.__repr__()
         dmsg = _format_dispatch_emsg(self, **kwargs)
         emsg = {"exception": m}
-        dmsg["content"]["data"]["content"].update(emsg)
+        dmsg.update(emsg)
         self.machine.dispatch(self.machine.serialize_fn(dmsg))
 
     def run(self):
