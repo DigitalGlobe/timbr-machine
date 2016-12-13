@@ -35,6 +35,7 @@ def _get_traceback():
 def _format_dispatch_emsg(inst, level="ERROR", **kwargs):
     m = {"origin": str(inst)}
     m["level"] = level
+    m.update(**kwargs)
     return m
 
 class MachineConsumer(StoppableThread):
