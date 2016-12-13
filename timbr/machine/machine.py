@@ -33,12 +33,9 @@ def _get_traceback():
     return tb
 
 def _format_dispatch_emsg(inst, level="ERROR", **kwargs):
-    m = {}
-    m["origin"] = str(inst)
+    m = {"origin": str(inst)}
     m["level"] = level
-    msg = {}
-    msg.update(m)
-    return msg
+    return m
 
 class MachineConsumer(StoppableThread):
     def __init__(self, machine, kernel_key=None):
@@ -184,6 +181,9 @@ class Machine(BaseMachine):
         if start_consumer:
             self.start()
 
+    def __str__(self):
+        return "Machine"
+
     @event
     def start(self):
         self.create_dispatcher()
@@ -226,6 +226,17 @@ class Machine(BaseMachine):
 
         if clear_buffer:
             self.q._init(self._bufsize)
+
+    def _dispatch_err(self, e, **kwargs):
+        m = {"location": "Machine"}
+        m["exc_class"] = str(e.__class__)
+        m["exc_type"] = str(type(e))
+        m["exc_tb"] = _get_traceback()
+        m["exc_value"] = e.__repr__()
+        dmsg = _format_dispatch_emsg(self, **kwargs)
+        emsg = {"exception": m}
+        dmsg.update(emsg)
+        self.dispatch(self.serialize_fn(dmsg))
 
     @property
     def source(self):
