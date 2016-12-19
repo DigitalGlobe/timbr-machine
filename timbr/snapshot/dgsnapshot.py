@@ -20,17 +20,17 @@ gdal.UseExceptions()
 
 def data_to_np(data):
     return np.fromstring(serializer.dumps(data), dtype="uint8")
-    
+
 class WrappedData(object):
     def __init__(self, snapshot, data, vrt_dir="/home/gremlin/vrt"):
         self.snapshot = snapshot
         self.data = data
         self.gid = data["id"]
         self._tmpfn = os.path.join(self.snapshot._vst_dir, ".tmp-{}.vrt".format(self.gid))
-        
+
     def __repr__(self):
         return json.dumps(self.data)
-    
+
     def __getitem__(self, item):
         return self.data[item]
 
@@ -43,35 +43,37 @@ class WrappedData(object):
         #write the vrt to a file
         with open(self._tmpfn, "w") as f:
             f.write(res.content)
-                        
+
     def _get_window(self):
         pass
 
     @property
     def vrt(self):
         pass
-        
+
 class DGSnapshot(Snapshot):
     def __init__(self, snapfile, vst_dir="/home/gremlin/.vst"):
         super(DGSnapshot, self).__init__(snapfile)
         self._vst_dir = vst_dir
         if not os.path.isdir(vst_dir):
             os.mkdir(vst_dir)
-            
-    def __getitem__(self, spec):                
+
+    def __getitem__(self, spec):
         if isinstance(spec, (int, long)):
             return WrappedData(self, self._input_fn(self._raw[spec].tostring()))
+        elif spec in ("type", "bounds"):
+            return self._input_fn(self.raw.attrs[spec].tostring())
         else:
             return list(self.__iter__(spec))
-        
-    def __iter__(self, specs=slice(None)):
+
+    def __iter__(self, spec=slice(None)):
         if isinstance(spec, slice):
             for rec in self._raw.iterrows(spec.start, spec.stop, spec.step):
                 yield WrappedData(self, self._input_fn(rec.tostring()))
         else:
             for rec in self._raw[spec]:
                 yield WrappedData(self, self._input_fn(rec.tostring()))
-                
+
     @classmethod
     def from_geojson(cls, geojsonfile, snapfile=None, **kwargs):
         with open(geojsonfile) as f:
@@ -89,4 +91,4 @@ class DGSnapshot(Snapshot):
         raw.attrs.type = data_to_np({"type": geojson["type"]})
         raw.attrs.bounds = data_to_np({"bounds ": geojson["bounds"]})
         snap.close()
-        return cls(snapfile, **kwargs)    
+        return cls(snapfile, **kwargs)
