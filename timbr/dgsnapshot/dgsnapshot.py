@@ -33,7 +33,7 @@ def roi_from_bbox_projection(src, user_bounds, preserve_blocksize=True):
     Calculate the intersection of a bounding box and a raster window by projecting the bounding box
     onto the raster coordinate grid. The resulting subwindow is the intersection of the bbox and the
     raster window defined as a function of the raster window. If preserve_blocksize is True, the subwindow
-    domain will be minimally padded with data to ensure that the resulting shape can be partitioned 
+    domain will be minimally padded with data to ensure that the resulting shape can be partitioned
     into an integer number of raster blocks.
     """
     roi = src.window(*user_bounds)
@@ -58,7 +58,7 @@ def build_url(gid, base_url="http://idaho.timbr.io", node="TOAReflectance", leve
 
 
 class WrappedGeoJSON(object):
-    def __init__(self, snapshot, data, vrt_dir="/home/gremlin/vrt"):
+    def __init__(self, snapshot, data, vrt_dir="/home/gremlin/project/vrt"):
         self._snapshot = snapshot
         self._data = data
         self._gid = data["id"]
@@ -83,13 +83,14 @@ class WrappedGeoJSON(object):
         h = h5py.Open(self._snapshot._filename)
         self._dpath = os.path.join("image_data", self._gid)
         ds = h.create_dataset(self._dpath, (len(self._src.indexes), self._roi.num_rows, self._row.num_cols), self._src.meta.get("dtype", "float32"))
-        read_win = ((self._roi.row_off, self._roi.num_rows), (self._roi.col_off, self._roi.num_cols))
-        ds[:,:,:] = self._src.read(window=read_win)
+        read_window = ((self._roi.row_off, self._roi.num_rows), (self._roi.col_off, self._roi.num_cols))
+        arr = self._src.read(window=read_window)
+        ds[:,:,:] = arr
         h.flush()
         h.close()
-        self.snapshot._fileh = tables.open(self.snapshot._filename) #reopen snapfile w pytables
+        self._snapshot._fileh = tables.open(self.snapshot._filename) #reopen snapfile w pytables
         self._generate_vrt()
-        self._src.close() 
+        self._src.close()
         return self._vrt_file
 
     def _generate_vrt(self):
@@ -102,9 +103,9 @@ class WrappedGeoJSON(object):
             src = ET.SubElement(band, "SimpleSource")
             ET.SubElement(src, "SourceFilename").text = "HDF5:{}://image_data/{}".format(self._snapshot._filename, self._gid)
             ET.SubElement(src, "SourceBand").text =str(i)
-            ET.SubElement(src, "SrcRect", {"xOff": "0", "yOff": "0", 
+            ET.SubElement(src, "SrcRect", {"xOff": "0", "yOff": "0",
                                            "xSize": str(self._roi.num_cols), "ySize": str(self._roi.num_rows)})
-            ET.SubElement(src, "DstRect", {"xOff": "0", "yOff": "0", 
+            ET.SubElement(src, "DstRect", {"xOff": "0", "yOff": "0",
                                            "xSize": str(self._roi.num_cols), "ySize": str(self._roi.num_rows)})
 
             ET.SubElement(src, "SourceProperties", {"RasterXSize": str(self._roi.num_cols), "RasterYSize": str(self._roi.num_rows),
@@ -113,7 +114,7 @@ class WrappedGeoJSON(object):
         self._vrt_file = os.path.join(self._vrt_dir, "{}.vrt".format(self._gid))
         with open(sef._vrt_file, "w") as f:
             f.write(vrt_str)
-        
+
     @property
     def vrt(self):
         if self._vrt_file is not None:
@@ -122,7 +123,7 @@ class WrappedGeoJSON(object):
         return self.fetch()
 
 class DGSnapshot(Snapshot):
-    def __init__(self, snapfile, vst_dir="/home/gremlin/.vst"):
+    def __init__(self, snapfile, vst_dir="/home/gremlin/project/.vst"):
         super(DGSnapshot, self).__init__(snapfile)
         self._vst_dir = vst_dir
         if not os.path.isdir(vst_dir):
@@ -144,12 +145,12 @@ class DGSnapshot(Snapshot):
         else:
             for rec in self._raw[spec]:
                 yield self._wrap_data(self._input_fn(rec.tostring()))
-                
+
     def _wrap_data(self, data):
         if data["id"] not in self._lut:
             self._lut[data["id"]] = WrappedGeoJSON(self, data)
         return self._lut[data["id"]]
-    
+
     @classmethod
     def from_geojson(cls, geojsonfile, snapfile=None, **kwargs):
         with open(geojsonfile) as f:
