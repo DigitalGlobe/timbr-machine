@@ -25,11 +25,10 @@ by default the file will be written to `/path/to/<your_geojson_filename>.h5`.
 
 Feature data can be accessed via indexing or iteration. The wrapped data that is returned can be inspected as usual:
 
-```Python
+```
 >>> dgsnap[0]
 
->>> {"geometry": {"type": "Polygon", "coordinates": ...
-...  "product_level": "LV1B"}}
+>>> {"geometry": {"type": "Polygon", "coordinates": ... "product_level": "LV1B"}}
 ```
 
 The returned object can be accessed like a normal dictionary:
