@@ -45,7 +45,32 @@ Nested data can be accessed via keys like a normal dictionary, and returns the d
 
 # Fetching Images
 
-Calling `fetch()` on a 
+Calling `fetch()` on some wrapped geoJSON data attempts to write image data to your snapshot corresponding to your feature by 
+performing the following steps:
+
+1. Build the appropriate url for accessing the relevant .vrt file hosted at http://idaho.timbr.io
+2. If this file exists, open it and read the raster window corresponding to the intersection of the geoJSON feature and the raster image
+3. Write this data to the snapshot file at the hdf5 path `/image_data/<feature_id>`
+4. Create a local .vrt file that containing the appropriate metadata that references the location of the image in the snapfile
+
+Step 2 of the above process can potentially take a long time to complete due to the fact that the accessed vrt file may reference hundreds
+or thousands of different image paths corresponding to chunks of the final raster. Multithreaded or Multiprocessing read options will be 
+available in the future to mitigate read completion times.
+
+# Reading Images
+
+Once `fetch()` has been called, images can be read directly from an index via the `vrt` attribute using a relevant library like 
+`rasterio` or `gdal`:
+
+```Python
+import rasterio
+
+with rasterio.open(dgsnap[0].vrt) as src:
+	image = src.read()
+```
+
+If you image data is multi-banded, this will return a numpy array with the shape `(num_bands, num_rows, num_cols)`. In the event that the reference vrt 
+file cannot be found, `fetch()` will be called in an attempt to create it after fetching and writing the raster.
 
 
 
