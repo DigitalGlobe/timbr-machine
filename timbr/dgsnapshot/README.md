@@ -33,15 +33,15 @@ Feature data can be accessed via indexing or iteration. The wrapped data that is
 
 The returned object can be accessed like a normal dictionary:
 
-```Python
+```
 >>> dgsnap[0]['geometry']
 
 >>> {'coordinates': [[[-77.07880205, 38.12225203],
-   [-77.07880205, 38.26130324],
-   [-76.89342114, 38.26130324],
-   [-76.89342114, 38.12225203],
-   [-77.07880205, 38.12225203]]],
- 'type': 'Polygon'}
+[-77.07880205, 38.26130324],
+[-76.89342114, 38.26130324],
+[-76.89342114, 38.12225203],
+[-77.07880205, 38.12225203]]],
+'type': 'Polygon'}
  ```
 
 
