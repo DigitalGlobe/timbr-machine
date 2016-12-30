@@ -66,7 +66,7 @@ class MetaWrap(type):
         return type.__call__(cls, *args, **kwargs)
 
 class WrappedGeoJSON(object):
-    __metaclass__ = MetaWrapped
+    __metaclass__ = MetaWrap
     def __init__(self, snapshot, data=None, vrt_dir="/home/gremlin/project/vrt"):
         self._snapshot = snapshot
         self._data = data
