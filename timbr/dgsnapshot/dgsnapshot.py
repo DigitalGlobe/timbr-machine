@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import json
+import inspect
 
 from requests.compat import urljoin
 import requests
@@ -56,20 +57,28 @@ def build_url(gid, base_url="http://idaho.timbr.io", node="TOAReflectance", leve
     relpath = "/".join([gid, node, str(level) + ".vrt"])
     return urljoin(base_url, relpath)
 
+class MetaWrap(type):
+    def __call__(cls, *args, **kwargs):
+        if "data" in kwargs and kwargs["data"] is not None:
+            for name, attr in inspect.getmembers(kwargs["data"]):
+                if name not in dir(cls):
+                    setattr(cls, name, attr)
+        return type.__call__(cls, *args, **kwargs)
 
 class WrappedGeoJSON(object):
-    def __init__(self, snapshot, data, vrt_dir="/home/gremlin/project/vrt"):
+    __metaclass__ = MetaWrapped
+    def __init__(self, snapshot, data=None, vrt_dir="/home/gremlin/project/vrt"):
         self._snapshot = snapshot
         self._data = data
         self._gid = data["id"]
         self._vrt_dir = vrt_dir
         self._vrt_file = None
 
-    def __repr__(self):
-        return json.dumps(self._data)
+    def __setitem__(self, key, value):
+        raise NotSupportedError
 
-    def __getitem__(self, item):
-        return self._data[item]
+    def __delitem__(self, key):
+        raise NotSupportedError
 
     def fetch(self, **kwargs):
         url = build_url(self._gid, **kwargs)
@@ -148,7 +157,7 @@ class DGSnapshot(Snapshot):
 
     def _wrap_data(self, data):
         if data["id"] not in self._lut:
-            self._lut[data["id"]] = WrappedGeoJSON(self, data)
+            self._lut[data["id"]] = WrappedGeoJSON(self, data=data)
         return self._lut[data["id"]]
 
     @classmethod
