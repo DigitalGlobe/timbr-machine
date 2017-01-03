@@ -30,16 +30,11 @@ Feature data can be accessed via indexing or iteration. The wrapped data that is
 {"geometry": {"type": "Polygon", "coordinates": ... "product_level": "LV1B"}}
 ```
 
-Nested data can be accessed via keys like a normal dictionary, and returns the data object:
+The wrapped data behaves like a dictionary:
 
 ```
->>> geo = dgsnap[0]['geometry']
-
->>> geo
-{'coordinates': [[[-77.07880205, 38.12225203], [-77.07880205, 38.26130324], ... 38.12225203]]], 'type': 'Polygon'}
-
->>> type(geo)
-'dict'
+>>> dgsnap[0].keys()
+['geometry']
 ```
 
 
