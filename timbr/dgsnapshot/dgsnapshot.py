@@ -30,13 +30,6 @@ def index_to_slice(ind, rowstep, colstep):
     return window
 
 def roi_from_bbox_projection(src, user_bounds, preserve_blocksize=True):
-    """
-    Calculate the intersection of a bounding box and a raster window by projecting the bounding box
-    onto the raster coordinate grid. The resulting subwindow is the intersection of the bbox and the
-    raster window defined as a function of the raster window. If preserve_blocksize is True, the subwindow
-    domain will be minimally padded with data to ensure that the resulting shape can be partitioned
-    into an integer number of raster blocks.
-    """
     roi = src.window(*user_bounds)
     if not preserve_blocksize:
         return roi
@@ -44,9 +37,6 @@ def roi_from_bbox_projection(src, user_bounds, preserve_blocksize=True):
     return blocksafe_roi
 
 def generate_blocks(window, blocksize):
-    """
-    Return a generator that yields window blocks sequentially over axis[0].
-    """
     rowsize, colsize = blocksize
     nrowblocks = window.num_rows / rowsize
     ncolblocks = window.num_cols / colsize
@@ -83,20 +73,19 @@ class WrappedGeoJSON(object):
     def fetch(self, **kwargs):
         url = build_url(self._gid, **kwargs)
         self._user_bounds = parse_bounds(self._snapshot["bounds"]["bounds"])
-        # Open the vrt:
         self._src = rasterio.open(url)
         self._roi = roi_from_bbox_projection(self._src, self._user_bounds)
 
-        if not self._snapshot._fileh.closed():
-            self._snapshot._fileh.close()
-        h = h5py.Open(self._snapshot._filename)
+        self._snapshot._fileh.close():
+        h = h5py.File(self._snapshot._filename)
         self._dpath = os.path.join("image_data", self._gid)
-        ds = h.create_dataset(self._dpath, (len(self._src.indexes), self._roi.num_rows, self._row.num_cols), self._src.meta.get("dtype", "float32"))
+        ds = h.create_dataset(self._dpath, (len(self._src.indexes), self._roi.num_rows, self._roi.num_cols), self._src.meta.get("dtype", "float32"))
         read_window = ((self._roi.row_off, self._roi.num_rows), (self._roi.col_off, self._roi.num_cols))
         arr = self._src.read(window=read_window)
         ds[:,:,:] = arr
         h.flush()
         h.close()
+
         self._snapshot._fileh = tables.open(self.snapshot._filename) #reopen snapfile w pytables
         self._generate_vrt()
         self._src.close()
