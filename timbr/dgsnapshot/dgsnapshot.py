@@ -77,7 +77,7 @@ class WrappedGeoJSON(object):
         self._src = rasterio.open(url)
         self._roi = roi_from_bbox_projection(self._src, self._user_bounds)
 
-        self._snapshot._fileh.close():
+        self._snapshot._fileh.close()
         h = h5py.File(self._snapshot._filename)
         self._dpath = os.path.join("image_data", self._gid)
         ds = h.create_dataset(self._dpath, (len(self._src.indexes), self._roi.num_rows, self._roi.num_cols), self._src.meta.get("dtype", "float32"))
