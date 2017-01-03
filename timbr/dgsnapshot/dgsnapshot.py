@@ -12,6 +12,7 @@ import inspect
 from requests.compat import urljoin
 import requests
 
+import xml.etree.cElementTree as ET
 import rasterio
 
 from osgeo import gdal
@@ -62,7 +63,7 @@ class WrappedGeoJSON(object):
         self._data = data
         self._gid = data["id"]
         self._vrt_dir = vrt_dir
-        self._vrt_file = None
+        self._vrt_file = os.path.join(self._vrt_dir, "{}.vrt".format(self._gid))
 
     def __setitem__(self, key, value):
         raise NotSupportedError
@@ -110,12 +111,12 @@ class WrappedGeoJSON(object):
                                                     "BlockXSize": "128", "BlockYSize": "128", "DataType": self._src.dtypes[i-1].title()})
         vrt_str = ET.tostring(vrt)
         self._vrt_file = os.path.join(self._vrt_dir, "{}.vrt".format(self._gid))
-        with open(sef._vrt_file, "w") as f:
+        with open(self._vrt_file, "w") as f:
             f.write(vrt_str)
 
     @property
     def vrt(self):
-        if self._vrt_file is not None:
+        if os.path.exists(self._vrt_file):
             return self._vrt_file
         print("fetching image from vrt, writing to snapshot file and generating vrt reference")
         return self.fetch()
