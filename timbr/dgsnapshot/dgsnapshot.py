@@ -79,11 +79,11 @@ class WrappedGeoJSON(object):
         self._roi = roi_from_bbox_projection(self._src, self._user_bounds)
         self._new_bounds = self._src.window_bounds(self._roi)
 
-        self._snapshot._fileh.close()
-        h = h5py.File(self._snapshot._filename)
+        # self._snapshot._fileh.close()
+        # h = h5py.File(self._snapshot._filename)
         self._dpath = os.path.join("image_data", node, level, self._gid)
-        ds = h.create_dataset(self._dpath, (len(self._src.indexes), self._roi.num_rows, self._roi.num_cols), self._src.meta.get("dtype", "float32"))
-        read_window = ((self._roi.row_off, self._roi.num_rows), (self._roi.col_off, self._roi.num_cols))
+        # ds = h.create_dataset(self._dpath, (len(self._src.indexes), self._roi.num_rows, self._roi.num_cols), self._src.meta.get("dtype", "float32"))
+        # read_window = ((self._roi.row_off, self._roi.num_rows), (self._roi.col_off, self._roi.num_cols))
         imalloc = np.zeros((self._src.indexes[-1], self._roi.num_rows, self._roi.num_cols))
         # arr = self._src.read(window=read_window)
         # ds[:,:,:] = arr
