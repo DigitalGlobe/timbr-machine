@@ -37,6 +37,8 @@ def roi_from_bbox_projection(src, user_bounds, preserve_blocksize=True):
     blocksafe_roi = rasterio.windows.round_window_to_full_blocks(roi, src.block_shapes)
     return blocksafe_roi
 
+def bounds_from_
+
 def generate_blocks(window, blocksize):
     rowsize, colsize = blocksize
     nrowblocks = window.num_rows / rowsize
@@ -72,27 +74,31 @@ class WrappedGeoJSON(object):
         raise NotSupportedError
 
     def fetch(self, **kwargs):
+        node = kwargs.get("node", "TOAReflectance")
+        level = str(kwargs.get("level", "0"))
         url = build_url(self._gid, **kwargs)
         self._user_bounds = parse_bounds(self._snapshot["bounds"]["bounds"])
         self._src = rasterio.open(url)
         self._roi = roi_from_bbox_projection(self._src, self._user_bounds)
+        self._new_bounds = self._src.window_bounds(self._roi)
 
         self._snapshot._fileh.close()
         h = h5py.File(self._snapshot._filename)
-        self._dpath = os.path.join("image_data", self._gid)
+        self._dpath = os.path.join("image_data", node, level, self._gid)
         ds = h.create_dataset(self._dpath, (len(self._src.indexes), self._roi.num_rows, self._roi.num_cols), self._src.meta.get("dtype", "float32"))
         read_window = ((self._roi.row_off, self._roi.num_rows), (self._roi.col_off, self._roi.num_cols))
-        arr = self._src.read(window=read_window)
-        ds[:,:,:] = arr
-        h.flush()
-        h.close()
+        imalloc = np.zeros((self._src.indexes[-1], self._roi.num_rows, self._roi.num_cols))
+        # arr = self._src.read(window=read_window)
+        # ds[:,:,:] = arr
+        # h.flush()
+        # h.close()
 
-        self._snapshot._fileh = tables.open(self.snapshot._filename) #reopen snapfile w pytables
-        self._generate_vrt()
-        self._src.close()
-        return self._vrt_file
+        # self._snapshot._fileh = tables.open(self.snapshot._filename) #reopen snapfile w pytables
+        # self._generate_vrt(**kwargs)
+        # self._src.close()
+        # return self._vrt_file
 
-    def _generate_vrt(self):
+    def _generate_vrt(self, **kwargs):
         vrt = ET.Element("VRTDataset", {"rasterXsize": str(self._roi.num_cols),
                         "rasterYSize": str(self._roi.num_rows)})
         ET.SubElement(vrt, "SRS").text = str(self._src.crs['init']).upper()
@@ -110,7 +116,10 @@ class WrappedGeoJSON(object):
             ET.SubElement(src, "SourceProperties", {"RasterXSize": str(self._roi.num_cols), "RasterYSize": str(self._roi.num_rows),
                                                     "BlockXSize": "128", "BlockYSize": "128", "DataType": self._src.dtypes[i-1].title()})
         vrt_str = ET.tostring(vrt)
-        self._vrt_file = os.path.join(self._vrt_dir, "{}.vrt".format(self._gid))
+
+        node = kwargs.get("node", "TOAReflectance")
+        level = kwargs.get("level", "0")
+        self._vrt_file = os.path.join(self._vrt_dir, node, str(level), "{}.vrt".format(self._gid))
         with open(self._vrt_file, "w") as f:
             f.write(vrt_str)
 
