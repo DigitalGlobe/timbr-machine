@@ -63,7 +63,6 @@ class WrappedGeoJSON(object):
         self._data = data
         self._gid = data["id"]
         self._vrt_dir = vrt_dir
-        self._vrt_file = os.path.join(self._vrt_dir, "{}.vrt".format(self._gid))
 
     def __setitem__(self, key, value):
         raise NotSupportedError
@@ -117,16 +116,19 @@ class WrappedGeoJSON(object):
 
         node = kwargs.get("node", "TOAReflectance")
         level = kwargs.get("level", "0")
-        self._vrt_file = os.path.join(self._vrt_dir, node, str(level), "{}.vrt".format(self._gid))
-        with open(self._vrt_file, "w") as f:
+        vrt_file = self._vrt_file(**kwargs)
+        with open(vrt_file, "w") as f:
             f.write(vrt_str)
 
-    @property
-    def vrt(self):
-        if os.path.exists(self._vrt_file):
-            return self._vrt_file
+    def _vrt_file(self, node="TOAReflectance", level="0"):
+        return os.path.join(self._vrt_dir, ".".join([node, str(level), "{}.vrt".format(self._gid)]))
+
+    def vrt(self, node="TOAReflectance", level="0"):
+        vrt_file = self._vrt_file(node, level)
+        if os.path.exists(vrt_file):
+            vrt_file
         print("fetching image from vrt, writing to snapshot file and generating vrt reference")
-        return self.fetch()
+        return self.fetch(node=node, level=level)
 
 class DGSnapshot(Snapshot):
     def __init__(self, snapfile, vst_dir="/home/gremlin/project/.vst"):
