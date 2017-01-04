@@ -14,7 +14,7 @@ Currently the best way to create a DGSnapshot is from an onhand geoJSON file usi
 from timbr.dgsnapshot import DGSnapshot
 
 # Create a DGSnapshot from a geoJSON file containing a set of features
-dgsnap = DGSnapshot('/path/to/<your_geojson_filename>.json', snapfile='output_snap.h5')
+dgsnap = DGSnapshot.from_geojson('/path/to/<your_geojson_filename>.json', snapfile='output_snap.h5')
 ```
 
 This will write each element of your feature set to the Snapshot array. You may optionally pass the output path to the snapfile; 
