@@ -37,8 +37,6 @@ def roi_from_bbox_projection(src, user_bounds, preserve_blocksize=True):
     blocksafe_roi = rasterio.windows.round_window_to_full_blocks(roi, src.block_shapes)
     return blocksafe_roi
 
-def bounds_from_
-
 def generate_blocks(window, blocksize):
     rowsize, colsize = blocksize
     nrowblocks = window.num_rows / rowsize
