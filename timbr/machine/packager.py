@@ -28,7 +28,7 @@ def cooperative_consume(iter_noblock, cb):
                 yield cb(e)
     return cooperate(fn()).whenDone()
 
-def build_packager_component(kernel_key, conda_env, env_path="/home/gremlin/anaconda/envs", pkg_path="/home/gremlin/project/environments"):
+def build_packager_component(kernel_key, conda_env, env_path="/home/gremlin/anaconda/envs", pkg_path="/home/gremlin/environments"):
     class WampPackagerComponent(ApplicationSession):
         def __init__(self, kernel_key, conda_env=conda_env, env_path=env_path, pkg_path=pkg_path, config=ComponentConfig(realm=u"jupyter")):
             ApplicationSession.__init__(self, config=config)

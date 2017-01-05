@@ -69,7 +69,7 @@ class CaptureConnection(ZmqSubConnection):
 
 def build_capture_component(kernel_key):
     class WampCaptureComponent(ApplicationSession):
-        def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="/home/gremlin/project/data/.capture",
+        def __init__(self, kernel_key, config=ComponentConfig(realm=u"jupyter"), basename="/home/gremlin/data/.capture",
                         base_endpoint="ipc:///tmp/timbr-machine/", tracks=8, track_stack=False):
             ApplicationSession.__init__(self, config=config)
             self._kernel_key = kernel_key
