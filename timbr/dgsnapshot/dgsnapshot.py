@@ -1,22 +1,37 @@
 from timbr.snapshot.snapshot import Snapshot
 from timbr.machine import serializer
-import numpy as np
+
 import tables
 import h5py
-import json
+
 import os
 import sys
 import json
 import inspect
+from functools import partial
+from collections import defaultdict
+from itertools import groupby
+import threading
 
-from requests.compat import urljoin
 import requests
-
+from requests.compat import urljoin
 import xml.etree.cElementTree as ET
+import pycurl
+
 import rasterio
+from rasterio.io import MemoryFile
+import dask
+from dask.delayed import delayed
+import dask.array as da
+import numpy as np
 
 from osgeo import gdal
 gdal.UseExceptions()
+
+_curl_pool = defaultdict(pycurl.Curl)
+
+threaded_get = partial(dask.threaded.get, num_workers=8)
+dask.set_options(get=threaded_get)
 
 def data_to_np(data):
     return np.fromstring(serializer.dumps(data), dtype="uint8")
@@ -44,9 +59,54 @@ def generate_blocks(window, blocksize):
     for ind in np.ndindex((nrowblocks, ncolblocks)):
         yield index_to_slice(ind, nrowblocks, ncolblocks)
 
-def build_url(gid, base_url="http://idaho.timbr.io", node="TOAReflectance", level=0):
+def build_url(gid, base_url="http://idaho.timbr.io", node="TOAReflectance", level="0"):
     relpath = "/".join([gid, node, str(level) + ".vrt"])
     return urljoin(base_url, relpath)
+
+def collect_urls(vrt):
+    doc = ET.parse(vrt)
+    urls = list(set(item.text for item in doc.getroot().iter("SourceFilename") 
+                if item.text.startswith("http://")))
+    chunks = []
+    for url in urls:
+        head, _ = os.path.splitext(url)
+        head, y = os.path.split(head)
+        head, x = os.path.split(head)
+        head, key = os.path.split(head)
+        y = int(y)
+        x = int(x)
+        chunks.append((x, y, url))
+
+    grid = [[rec[-1] for rec in sorted(it, key=lambda x: x[1])]
+            for key, it in groupby(sorted(chunks, key=lambda x: x[0]), lambda x: x[0])]
+    return grid
+
+@delayed
+def load_url(url):
+    thread_id = threading.current_thread().ident
+    _curl = _curl_pool[thread_id]
+    finished = False
+    while not finished:
+        with MemoryFile() as memfile:
+            _curl.setopt(_curl.URL, url)
+            _curl.setopt(_curl.WRITEDATA, memfile)
+            _curl.perform()
+            try:
+                with memfile.open(driver="GTiff") as dataset:
+                    arr = dataset.read()
+                    finished = True
+            except rasterio.RasterioIOError:
+                print("Errored on {}".format(url))
+                arr = np.zeros([8,256,256], dtype=np.float32)
+    return arr
+
+def pfetch(vrt):
+    buf = da.concatenate(
+        [da.concatenate([da.from_delayed(load_url(url), shape=(8,256,256)) for url in row], 
+                        axis=1) for row in collect_urls(vrt)], axis=2)
+    # NOTE: next line will execute
+    wat = buf.compute()
+    return wat
 
 class MetaWrap(type):
     def __call__(cls, *args, **kwargs):
@@ -63,7 +123,6 @@ class WrappedGeoJSON(object):
         self._data = data
         self._gid = data["id"]
         self._vrt_dir = vrt_dir
-        self._vrt_file = os.path.join(self._vrt_dir, "{}.vrt".format(self._gid))
 
     def __setitem__(self, key, value):
         raise NotSupportedError
@@ -71,28 +130,36 @@ class WrappedGeoJSON(object):
     def __delitem__(self, key):
         raise NotSupportedError
 
-    def fetch(self, **kwargs):
-        url = build_url(self._gid, **kwargs)
+    def fetch(self, node="TOAReflectance", level="0"):
         self._user_bounds = parse_bounds(self._snapshot["bounds"]["bounds"])
+        url = build_url(self._gid, node=node, level=level)
         self._src = rasterio.open(url)
         self._roi = roi_from_bbox_projection(self._src, self._user_bounds)
+        #self._new_bounds = self._src.window_bounds(self._roi)
+
+        res = requests.get(url, params={"window": ",".join([str(c) for c in self._roi.flatten()])})
+        tmp_vrt = os.path.join(self._vrt_dir, ".".join([".tmp", node, level, self._gid + ".vrt"]))
+        with open(tmp_vrt, "w") as f:
+            f.write(res.content)
+
+        print("Starting parallel fetching...")
+        image = pfetch(tmp_vrt)
+        print("Fetch complete")
 
         self._snapshot._fileh.close()
         h = h5py.File(self._snapshot._filename)
-        self._dpath = os.path.join("image_data", self._gid)
-        ds = h.create_dataset(self._dpath, (len(self._src.indexes), self._roi.num_rows, self._roi.num_cols), self._src.meta.get("dtype", "float32"))
-        read_window = ((self._roi.row_off, self._roi.num_rows), (self._roi.col_off, self._roi.num_cols))
-        arr = self._src.read(window=read_window)
-        ds[:,:,:] = arr
+        self._dpath = os.path.join("image_data", self._gid, node, level)
+        ds = h.create_dataset(self._dpath, image.shape, self._src.meta.get("dtype", "float32"))
+        ds[:,:,:] = image
         h.flush()
         h.close()
 
-        self._snapshot._fileh = tables.open(self.snapshot._filename) #reopen snapfile w pytables
-        self._generate_vrt()
+        self._snapshot._fileh = tables.open_file(self._snapshot._filename) #reopen snapfile w pytables
+        vrt_file = self._generate_vrt(node=node, level=level)
         self._src.close()
-        return self._vrt_file
+        return vrt_file
 
-    def _generate_vrt(self):
+    def _generate_vrt(self, node="TOAReflectance", level="0"):
         vrt = ET.Element("VRTDataset", {"rasterXsize": str(self._roi.num_cols),
                         "rasterYSize": str(self._roi.num_rows)})
         ET.SubElement(vrt, "SRS").text = str(self._src.crs['init']).upper()
@@ -100,7 +167,7 @@ class WrappedGeoJSON(object):
         for i in self._src.indexes:
             band = ET.SubElement(vrt, "VRTRasterBand", {"dataType": self._src.dtypes[i-1].title(), "band": str(i)})
             src = ET.SubElement(band, "SimpleSource")
-            ET.SubElement(src, "SourceFilename").text = "HDF5:{}://image_data/{}".format(self._snapshot._filename, self._gid)
+            ET.SubElement(src, "SourceFilename").text = "HDF5:{}://image_data/{}/{}/{}".format(self._snapshot._filename, self._gid, node, level)
             ET.SubElement(src, "SourceBand").text =str(i)
             ET.SubElement(src, "SrcRect", {"xOff": "0", "yOff": "0",
                                            "xSize": str(self._roi.num_cols), "ySize": str(self._roi.num_rows)})
@@ -110,23 +177,30 @@ class WrappedGeoJSON(object):
             ET.SubElement(src, "SourceProperties", {"RasterXSize": str(self._roi.num_cols), "RasterYSize": str(self._roi.num_rows),
                                                     "BlockXSize": "128", "BlockYSize": "128", "DataType": self._src.dtypes[i-1].title()})
         vrt_str = ET.tostring(vrt)
-        self._vrt_file = os.path.join(self._vrt_dir, "{}.vrt".format(self._gid))
-        with open(self._vrt_file, "w") as f:
+
+
+        vrt_file = self._vrt_file(node, level)
+        with open(vrt_file, "w") as f:
             f.write(vrt_str)
 
-    @property
-    def vrt(self):
-        if os.path.exists(self._vrt_file):
-            return self._vrt_file
+        return vrt_file
+
+    def _vrt_file(self, node, level):
+        return os.path.join(self._vrt_dir, ".".join([self._gid, node, str(level) + ".vrt"]))
+
+    def vrt(self, node="TOAReflectance", level="0"):
+        vrt_file = self._vrt_file(node=node, level=level)
+        if os.path.exists(vrt_file):
+            return vrt_file
         print("fetching image from vrt, writing to snapshot file and generating vrt reference")
-        return self.fetch()
+        return self.fetch(node=node, level=level)
 
 class DGSnapshot(Snapshot):
-    def __init__(self, snapfile, vst_dir="/home/gremlin/project/.vst"):
+    def __init__(self, snapfile, vrt_dir="/home/gremlin/project/.vst"):
         super(DGSnapshot, self).__init__(snapfile)
-        self._vst_dir = vst_dir
-        if not os.path.isdir(vst_dir):
-            os.mkdir(vst_dir)
+        self._vrt_dir = vrt_dir
+        if not os.path.isdir(vrt_dir):
+            os.mkdir(vrt_dir)
         self._lut = {}
 
     def __getitem__(self, spec):
@@ -147,7 +221,7 @@ class DGSnapshot(Snapshot):
 
     def _wrap_data(self, data):
         if data["id"] not in self._lut:
-            self._lut[data["id"]] = WrappedGeoJSON(self, data=data)
+            self._lut[data["id"]] = WrappedGeoJSON(self, data=data, vrt_dir=self._vrt_dir)
         return self._lut[data["id"]]
 
     @classmethod

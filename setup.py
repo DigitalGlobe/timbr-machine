@@ -67,6 +67,8 @@ setup(name='timbr-machine',
           "simplejson>=3.6.5",
           "watchdog>=0.8.1",
           "jsonpath-rw>=1.4.0",
+          "pycurl",
+          "rasterio>=1.0",
         ],
       tests_require=[
           "nose",
