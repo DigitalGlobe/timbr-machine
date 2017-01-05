@@ -189,7 +189,7 @@ class WrappedGeoJSON(object):
         return os.path.join(self._vrt_dir, ".".join([self._gid, node, str(level) + ".vrt"]))
 
     def vrt(self, node="TOAReflectance", level="0"):
-        vrt_file = self._vrt_file(node=node, level=level)
+        vrt_file = self._vrt_file(node, level)
         if os.path.exists(vrt_file):
             return vrt_file
         print("fetching image from vrt, writing to snapshot file and generating vrt reference")
