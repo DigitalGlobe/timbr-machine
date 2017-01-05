@@ -131,10 +131,10 @@ class WrappedGeoJSON(object):
         raise NotSupportedError
 
     def fetch(self, node="TOAReflectance", level="0"):
-        self._user_bounds = parse_bounds(self._snapshot["bounds"]["bounds"])
+        user_bounds = parse_bounds(self._snapshot["bounds"]["bounds"])
         url = build_url(self._gid, node=node, level=level)
         self._src = rasterio.open(url)
-        self._roi = roi_from_bbox_projection(self._src, self._user_bounds)
+        self._roi = roi_from_bbox_projection(self._src, user_bounds)
         #self._new_bounds = self._src.window_bounds(self._roi)
 
         res = requests.get(url, params={"window": ",".join([str(c) for c in self._roi.flatten()])})
@@ -189,7 +189,7 @@ class WrappedGeoJSON(object):
         return os.path.join(self._vrt_dir, ".".join([self._gid, node, str(level) + ".vrt"]))
 
     def vrt(self, node="TOAReflectance", level="0"):
-        vrt_file = self._vrt_file(node=node, level=level)
+        vrt_file = self._vrt_file(node, level)
         if os.path.exists(vrt_file):
             return vrt_file
         print("fetching image from vrt, writing to snapshot file and generating vrt reference")
@@ -233,6 +233,7 @@ class DGSnapshot(Snapshot):
             snapfile = fn + ".h5"
         elif os.path.splitext(snapfile)[-1] != ".h5":
             snapfile = snapfile + ".h5"
+        
         snap = tables.open_file(snapfile, "w")
         raw = snap.create_vlarray(snap.root, "raw", atom=tables.UInt8Atom(shape=()), filters=tables.Filters(complevel=0))
         features = geojson["features"]
@@ -240,5 +241,6 @@ class DGSnapshot(Snapshot):
             raw.append(data_to_np(f))
         raw.attrs.type = data_to_np({"type": geojson["type"]})
         raw.attrs.bounds = data_to_np({"bounds": geojson["bounds"]})
+        
         snap.close()
         return cls(snapfile, **kwargs)
