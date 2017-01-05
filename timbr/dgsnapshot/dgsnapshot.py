@@ -118,7 +118,7 @@ class MetaWrap(type):
 
 class WrappedGeoJSON(object):
     __metaclass__ = MetaWrap
-    def __init__(self, snapshot, data=None, vrt_dir="/home/gremlin/project/vrt"):
+    def __init__(self, snapshot, data=None, vrt_dir="/home/gremlin/vrt"):
         self._snapshot = snapshot
         self._data = data
         self._gid = data["id"]
@@ -196,7 +196,7 @@ class WrappedGeoJSON(object):
         return self.fetch(node=node, level=level)
 
 class DGSnapshot(Snapshot):
-    def __init__(self, snapfile, vrt_dir="/home/gremlin/project/.vst"):
+    def __init__(self, snapfile, vrt_dir="/home/gremlin/.vst"):
         super(DGSnapshot, self).__init__(snapfile)
         self._vrt_dir = vrt_dir
         if not os.path.isdir(vrt_dir):
