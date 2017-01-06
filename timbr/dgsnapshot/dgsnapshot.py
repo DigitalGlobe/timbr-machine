@@ -102,7 +102,7 @@ def load_url(url):
 
 def pfetch(vrt):
     buf = da.concatenate(
-        [da.concatenate([da.from_delayed(load_url(url), shape=(8,256,256)) for url in row], 
+        [da.concatenate([da.from_delayed(load_url(url), (8,256,256)) for url in row], 
                         axis=1) for row in collect_urls(vrt)], axis=2)
     # NOTE: next line will execute
     wat = buf.compute()
