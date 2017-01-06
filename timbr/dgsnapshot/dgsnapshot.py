@@ -86,6 +86,7 @@ def load_url(url):
     thread_id = threading.current_thread().ident
     _curl = _curl_pool[thread_id]
     finished = False
+    #print("fetching...", url)
     while not finished:
         with MemoryFile() as memfile:
             _curl.setopt(_curl.URL, url)
@@ -102,7 +103,7 @@ def load_url(url):
 
 def pfetch(vrt):
     buf = da.concatenate(
-        [da.concatenate([da.from_delayed(load_url(url), (8,256,256)) for url in row], 
+        [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.uint16) for url in row], 
                         axis=1) for row in collect_urls(vrt)], axis=2)
     # NOTE: next line will execute
     wat = buf.compute()
@@ -148,7 +149,8 @@ class WrappedGeoJSON(object):
 
         self._snapshot._fileh.close()
         h = h5py.File(self._snapshot._filename)
-        self._dpath = os.path.join("image_data", self._gid, node, level)
+        self._dpath = "/{}_{}_{}".format( self._gid, node, level )
+        #self._dpath = os.path.join("image_data", self._gid, node, level)
         ds = h.create_dataset(self._dpath, image.shape, self._src.meta.get("dtype", "float32"))
         ds[:,:,:] = image
         h.flush()
@@ -167,7 +169,7 @@ class WrappedGeoJSON(object):
         for i in self._src.indexes:
             band = ET.SubElement(vrt, "VRTRasterBand", {"dataType": self._src.dtypes[i-1].title(), "band": str(i)})
             src = ET.SubElement(band, "SimpleSource")
-            ET.SubElement(src, "SourceFilename").text = "HDF5:{}://image_data/{}/{}/{}".format(self._snapshot._filename, self._gid, node, level)
+            ET.SubElement(src, "SourceFilename").text = "HDF5:{}://{}_{}_{}".format(self._snapshot._filename, self._gid, node, level)
             ET.SubElement(src, "SourceBand").text =str(i)
             ET.SubElement(src, "SrcRect", {"xOff": "0", "yOff": "0",
                                            "xSize": str(self._roi.num_cols), "ySize": str(self._roi.num_rows)})
@@ -241,6 +243,13 @@ class DGSnapshot(Snapshot):
             raw.append(data_to_np(f))
         raw.attrs.type = data_to_np({"type": geojson["type"]})
         raw.attrs.bounds = data_to_np({"bounds": geojson["bounds"]})
-        
+        snap.close()
+
+        snap = h5py.File(snapfile)
+        dummy_image = np.ones((100,100), dtype=np.int)
+        ds = snap.create_dataset('/dummy', dummy_image.shape, np.int)
+        ds[:,:] = dummy_image
+
+        snap.flush()
         snap.close()
         return cls(snapfile, **kwargs)

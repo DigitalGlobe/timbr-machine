@@ -58,7 +58,7 @@ setup(name='timbr-machine',
       ],
       install_requires=[
           "pymongo>=2.8",
-          "dask",
+          "dask>=0.13.0",
           "ipython",
           "observed",
           "h5py",
