@@ -196,7 +196,7 @@ class WrappedGeoJSON(object):
         return self.fetch(node=node, level=level)
 
 class DGSnapshot(Snapshot):
-    def __init__(self, snapfile, vrt_dir="/home/gremlin/.vst"):
+    def __init__(self, snapfile, vrt_dir="/home/gremlin/.vrt"):
         super(DGSnapshot, self).__init__(snapfile)
         self._vrt_dir = vrt_dir
         if not os.path.isdir(vrt_dir):
