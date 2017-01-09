@@ -30,7 +30,7 @@ gdal.UseExceptions()
 
 _curl_pool = defaultdict(pycurl.Curl)
 
-threaded_get = partial(dask.threaded.get, num_workers=8)
+threaded_get = partial(dask.threaded.get, num_workers=4)
 dask.set_options(get=threaded_get)
 
 def data_to_np(data):
@@ -102,9 +102,11 @@ def load_url(url):
     return arr
 
 def pfetch(vrt):
+    urls = collect_urls(vrt)
+    print("fetching %d chips" % len(urls))
     buf = da.concatenate(
         [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.uint16) for url in row], 
-                        axis=1) for row in collect_urls(vrt)], axis=2)
+                        axis=1) for row in urls], axis=2)
     # NOTE: next line will execute
     wat = buf.compute()
     return wat
@@ -150,9 +152,8 @@ class WrappedGeoJSON(object):
         print("Fetch complete")
 
         self._snapshot._fileh.close()
-        h = h5py.File(self._snapshot._filename)
+        h = h5py.File(self._snapshot._filename, 'w')
         self._dpath = "/{}_{}_{}".format( self._gid, node, level )
-        #self._dpath = os.path.join("image_data", self._gid, node, level)
         ds = h.create_dataset(self._dpath, image.shape, self._src.meta.get("dtype", "float32"))
         ds[:,:,:] = image
         h.flush()
@@ -217,8 +218,8 @@ class DGSnapshot(Snapshot):
             return list(self.__iter__(spec))
 
     def __iter__(self, specs=slice(None)):
-        if isinstance(spec, slice):
-            for rec in self._raw.iterrows(spec.start, spec.stop, spec.step):
+        if isinstance(specs, slice):
+            for rec in self._raw.iterrows(specs.start, specs.stop, specs.step):
                 yield self._wrap_data(self._input_fn(rec.tostring()))
         else:
             for rec in self._raw[spec]:
