@@ -109,6 +109,7 @@ def pfetch(vrt):
     wat = buf.compute()
     return wat
 
+
 class MetaWrap(type):
     def __call__(cls, *args, **kwargs):
         if "data" in kwargs and kwargs["data"] is not None:
@@ -116,6 +117,7 @@ class MetaWrap(type):
                 if name not in dir(cls):
                     setattr(cls, name, attr)
         return type.__call__(cls, *args, **kwargs)
+
 
 class WrappedGeoJSON(object):
     __metaclass__ = MetaWrap
@@ -196,6 +198,7 @@ class WrappedGeoJSON(object):
             return vrt_file
         print("fetching image from vrt, writing to snapshot file and generating vrt reference")
         return self.fetch(node=node, level=level)
+
 
 class DGSnapshot(Snapshot):
     def __init__(self, snapfile, vrt_dir="/home/gremlin/.vrt"):
