@@ -150,7 +150,7 @@ class WrappedGeoJSON(object):
         print("Fetch complete")
 
         self._snapshot._fileh.close()
-        h = h5py.File(self._snapshot._filename, 'wa')
+        h = h5py.File(self._snapshot._filename, 'a')
         self._dpath = "/{}_{}_{}".format( self._gid, node, level )
         ds = h.create_dataset(self._dpath, image.shape, self._src.meta.get("dtype", "float32"))
         ds[:,:,:] = image
@@ -236,8 +236,8 @@ class DGSnapshot(Snapshot):
             snapfile = fn + ".h5"
         elif os.path.splitext(snapfile)[-1] != ".h5":
             snapfile = snapfile + ".h5"
-        
-        snap = tables.open_file(snapfile, "w")
+       
+        snap = tables.open_file(snapfile, "a")
         raw = snap.create_vlarray(snap.root, "raw", atom=tables.UInt8Atom(shape=()), filters=tables.Filters(complevel=0))
         features = geojson["features"]
         for f in features:
