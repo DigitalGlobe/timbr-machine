@@ -152,7 +152,9 @@ class WrappedGeoJSON(object):
         h.flush()
         h.close()
 
-        self._snapshot._fileh = tables.open_file(self._snapshot._filename) #reopen snapfile w pytables
+        self._snapshot._fileh = tables.open_file(self._snapshot._filename, mode='r') #reopen snapfile w pytables
+        self._snapshot._raw = self._snapshot._fileh.root.raw
+
         vrt_file = self._generate_vrt(node=node, level=level)
         self._src.close()
         return vrt_file
