@@ -86,7 +86,7 @@ def load_url(url):
     thread_id = threading.current_thread().ident
     _curl = _curl_pool[thread_id]
     finished = False
-    print("fetching...", url)
+    #print("fetching...", url)
     while not finished:
         with MemoryFile() as memfile:
             _curl.setopt(_curl.URL, url)
@@ -103,7 +103,7 @@ def load_url(url):
 
 def pfetch(vrt):
     urls = collect_urls(vrt)
-    print("fetching %d chips" % len(urls))
+    #print("fetching %d chips" % len(urls))
     buf = da.concatenate(
         [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.uint16) for url in row], 
                         axis=1) for row in urls], axis=2)
@@ -140,7 +140,7 @@ class WrappedGeoJSON(object):
         with open(tmp_vrt, "w") as f:
             f.write(res.content)
 
-        print("Starting parallel fetching...")
+        print("Starting parallel fetching... %d chips" % sum([len(x) for x in tmp_vrt]) )
         image = pfetch(tmp_vrt)
         print("Fetch complete")
 
