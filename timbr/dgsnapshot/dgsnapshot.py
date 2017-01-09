@@ -112,17 +112,7 @@ def pfetch(vrt):
     return wat
 
 
-class MetaWrap(type):
-    def __call__(cls, *args, **kwargs):
-        if "data" in kwargs and kwargs["data"] is not None:
-            for name, attr in inspect.getmembers(kwargs["data"]):
-                if name not in dir(cls):
-                    setattr(cls, name, attr)
-        return type.__call__(cls, *args, **kwargs)
-
-
 class WrappedGeoJSON(object):
-    __metaclass__ = MetaWrap
     def __init__(self, snapshot, data=None, vrt_dir="/home/gremlin/vrt"):
         self._snapshot = snapshot
         self._data = data
@@ -134,6 +124,9 @@ class WrappedGeoJSON(object):
 
     def __delitem__(self, key):
         raise NotSupportedError
+
+    def __getitem__(self, key):
+        return self._data[key]
 
     def fetch(self, node="TOAReflectance", level="0"):
         user_bounds = parse_bounds(self._snapshot["bounds"]["bounds"])
@@ -152,7 +145,7 @@ class WrappedGeoJSON(object):
         print("Fetch complete")
 
         self._snapshot._fileh.close()
-        h = h5py.File(self._snapshot._filename, 'wa')
+        h = h5py.File(self._snapshot._filename, 'a')
         self._dpath = "/{}_{}_{}".format( self._gid, node, level )
         ds = h.create_dataset(self._dpath, image.shape, self._src.meta.get("dtype", "float32"))
         ds[:,:,:] = image
