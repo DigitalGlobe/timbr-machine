@@ -232,7 +232,7 @@ class DGSnapshot(Snapshot):
             snapfile = fn + ".h5"
         elif os.path.splitext(snapfile)[-1] != ".h5":
             snapfile = snapfile + ".h5"
-        
+       
         snap = tables.open_file(snapfile, "w")
         raw = snap.create_vlarray(snap.root, "raw", atom=tables.UInt8Atom(shape=()), filters=tables.Filters(complevel=0))
         features = geojson["features"]
