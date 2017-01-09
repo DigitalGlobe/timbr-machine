@@ -86,7 +86,7 @@ def load_url(url):
     thread_id = threading.current_thread().ident
     _curl = _curl_pool[thread_id]
     finished = False
-    #print("fetching...", url)
+    print("fetching...", url)
     while not finished:
         with MemoryFile() as memfile:
             _curl.setopt(_curl.URL, url)
@@ -150,7 +150,7 @@ class WrappedGeoJSON(object):
         print("Fetch complete")
 
         self._snapshot._fileh.close()
-        h = h5py.File(self._snapshot._filename, 'w')
+        h = h5py.File(self._snapshot._filename, 'wa')
         self._dpath = "/{}_{}_{}".format( self._gid, node, level )
         ds = h.create_dataset(self._dpath, image.shape, self._src.meta.get("dtype", "float32"))
         ds[:,:,:] = image
