@@ -65,7 +65,7 @@ def build_url(gid, base_url="http://idaho.timbr.io", node="TOAReflectance", leve
 
 def collect_urls(vrt):
     doc = ET.parse(vrt)
-    urls = list(set(item.text for item in doc.getroot().iter("SourceFilename") 
+    urls = list(set(item.text for item in doc.getroot().iter("SourceFilename")
                 if item.text.startswith("http://")))
     chunks = []
     for url in urls:
@@ -106,7 +106,7 @@ def pfetch(vrt):
     #print("fetching %d chips" % len(urls))
     print("Starting parallel fetching... %d chips" % sum([len(x) for x in urls]) )
     buf = da.concatenate(
-        [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.uint16) for url in row], 
+        [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.uint16) for url in row],
                         axis=1) for row in urls], axis=2)
     # NOTE: next line will execute
     wat = buf.compute()
@@ -236,8 +236,8 @@ class DGSnapshot(Snapshot):
             snapfile = fn + ".h5"
         elif os.path.splitext(snapfile)[-1] != ".h5":
             snapfile = snapfile + ".h5"
-       
-        snap = tables.open_file(snapfile, "w")
+
+        snap = tables.open_file(snapfile, "a")
         raw = snap.create_vlarray(snap.root, "raw", atom=tables.UInt8Atom(shape=()), filters=tables.Filters(complevel=0))
         features = geojson["features"]
         for f in features:
