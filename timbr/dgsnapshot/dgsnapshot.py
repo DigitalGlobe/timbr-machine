@@ -242,8 +242,8 @@ class DGSnapshot(Snapshot):
         features = geojson["features"]
         for f in features:
             raw.append(data_to_np(f))
-        raw.attrs.type = data_to_np({"type": geojson["type"]})
-        raw.attrs.bounds = data_to_np({"bounds": geojson["bounds"]})
+        raw.attrs.type = geojson["type"]
+        raw.attrs.bounds = geojson["bounds"]
         snap.close()
 
         snap = h5py.File(snapfile)
