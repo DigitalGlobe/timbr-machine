@@ -104,6 +104,7 @@ def load_url(url):
 def pfetch(vrt):
     urls = collect_urls(vrt)
     #print("fetching %d chips" % len(urls))
+    print("Starting parallel fetching... %d chips" % sum([len(x) for x in urls]) )
     buf = da.concatenate(
         [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.uint16) for url in row], 
                         axis=1) for row in urls], axis=2)
@@ -135,12 +136,13 @@ class WrappedGeoJSON(object):
         self._roi = roi_from_bbox_projection(self._src, user_bounds)
         #self._new_bounds = self._src.window_bounds(self._roi)
 
-        res = requests.get(url, params={"window": ",".join([str(c) for c in self._roi.flatten()])})
+        window = self._roi.flatten()
+        px_bounds = [window[0], window[1], window[0] + window[2], window[1] + window[3] ]
+        res = requests.get(url, params={"window": ",".join([str(c) for c in px_bounds])})
         tmp_vrt = os.path.join(self._vrt_dir, ".".join([".tmp", node, level, self._gid + ".vrt"]))
         with open(tmp_vrt, "w") as f:
             f.write(res.content)
 
-        print("Starting parallel fetching... %d chips" % sum([len(x) for x in tmp_vrt]) )
         image = pfetch(tmp_vrt)
         print("Fetch complete")
 
@@ -160,7 +162,7 @@ class WrappedGeoJSON(object):
         return vrt_file
 
     def _generate_vrt(self, node="TOAReflectance", level="0"):
-        vrt = ET.Element("VRTDataset", {"rasterXsize": str(self._roi.num_cols),
+        vrt = ET.Element("VRTDataset", {"rasterXSize": str(self._roi.num_cols),
                         "rasterYSize": str(self._roi.num_rows)})
         ET.SubElement(vrt, "SRS").text = str(self._src.crs['init']).upper()
         ET.SubElement(vrt, "GeoTransform").text = ", ".join([str(c) for c in self._src.get_transform()])
