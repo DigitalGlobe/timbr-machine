@@ -28,10 +28,18 @@ import numpy as np
 from osgeo import gdal
 gdal.UseExceptions()
 
-_curl_pool = defaultdict(pycurl.Curl)
+NTHREAD_DEFAULT = 4
+_num_workers = NTHREAD_DEFAULT
 
-threaded_get = partial(dask.threaded.get, num_workers=4)
+if "TIMBR_DGSNAP_NTHREAD" in os.environ:
+    try:
+        _num_workers = int(os.environ["TIMBR_DGSNAP_NTHREAD"])
+    except ValueError as ve:
+        os.environ["TIMBR_DGSNAP_NTHREAD"] = NTHREAD_DEFAULT
+
+threaded_get = partial(dask.threaded.get, num_workers=_num_workers)
 dask.set_options(get=threaded_get)
+_curl_pool = defaultdict(pycurl.Curl)
 
 class NotSupportedException(NotImplementedError):
     pass
