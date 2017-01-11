@@ -33,6 +33,9 @@ _curl_pool = defaultdict(pycurl.Curl)
 threaded_get = partial(dask.threaded.get, num_workers=4)
 dask.set_options(get=threaded_get)
 
+class NotSupportedException(NotImplementedError):
+    pass
+
 def data_to_np(data):
     return np.fromstring(serializer.dumps(data), dtype="uint8")
 
@@ -113,24 +116,21 @@ def pfetch(vrt):
     return wat
 
 
-class WrappedGeoJSON(object):
-    def __init__(self, snapshot, data=None, vrt_dir="/home/gremlin/vrt"):
+class WrappedGeoJSON(dict):
+    def __init__(self, snapshot, data, vrt_dir="/home/gremlin/vrt"):
+        self.update(data)
         self._snapshot = snapshot
-        self._data = data
         self._gid = data["id"]
         self._vrt_dir = vrt_dir
 
     def __setitem__(self, key, value):
-        raise NotSupportedError
+        raise NotSupportedException
 
     def __delitem__(self, key):
-        raise NotSupportedError
-
-    def __getitem__(self, key):
-        return self._data[key]
+        raise NotSupportedException
 
     def fetch(self, node="TOAReflectance", level="0"):
-        user_bounds = parse_bounds(self._snapshot["bounds"]["bounds"])
+        user_bounds = parse_bounds(self._snapshot["bounds"])
         url = build_url(self._gid, node=node, level=level)
         self._src = rasterio.open(url)
         self._roi = roi_from_bbox_projection(self._src, user_bounds)
@@ -210,7 +210,7 @@ class DGSnapshot(Snapshot):
         if isinstance(spec, (int, long)):
             return self._wrap_data(self._input_fn(self._raw[spec].tostring()))
         elif spec in ("type", "bounds"):
-            return self._input_fn(self.raw.attrs[spec].tostring())
+            return self.raw.attrs[spec]
         else:
             return list(self.__iter__(spec))
 
@@ -224,7 +224,7 @@ class DGSnapshot(Snapshot):
 
     def _wrap_data(self, data):
         if data["id"] not in self._lut:
-            self._lut[data["id"]] = WrappedGeoJSON(self, data=data, vrt_dir=self._vrt_dir)
+            self._lut[data["id"]] = WrappedGeoJSON(self, data, vrt_dir=self._vrt_dir)
         return self._lut[data["id"]]
 
     @classmethod
@@ -236,6 +236,13 @@ class DGSnapshot(Snapshot):
             snapfile = fn + ".h5"
         elif os.path.splitext(snapfile)[-1] != ".h5":
             snapfile = snapfile + ".h5"
+
+        if os.path.exists(snapfile):
+            inst = cls(snapfile, **kwargs)
+            if inst._fileh.root.raw.attrs.bounds == geojson["bounds"]:
+                return inst
+            inst.close()
+            raise IOError("The file {} already exists and was created with different coordinate bounds. Delete this file before creating a new one.".format(snapfile))
 
         snap = tables.open_file(snapfile, "a")
         raw = snap.create_vlarray(snap.root, "raw", atom=tables.UInt8Atom(shape=()), filters=tables.Filters(complevel=0))
