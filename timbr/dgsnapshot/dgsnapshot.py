@@ -38,7 +38,6 @@ if "TIMBR_DGSNAP_NTHREAD" in os.environ:
         os.environ["TIMBR_DGSNAP_NTHREAD"] = NTHREAD_DEFAULT
 
 threaded_get = partial(dask.threaded.get, num_workers=_num_workers)
-dask.set_options(get=threaded_get)
 _curl_pool = defaultdict(pycurl.Curl)
 
 class NotSupportedException(NotImplementedError):
@@ -120,7 +119,11 @@ def pfetch(vrt):
         [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.uint16) for url in row],
                         axis=1) for row in urls], axis=2)
     # NOTE: next line will execute
-    wat = buf.compute()
+    wat = buf.compute(get=threaded_get)
+
+    for key in _curl_pool:
+        del _curl_pool[key]
+    
     return wat
 
 
