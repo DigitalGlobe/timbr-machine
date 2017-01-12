@@ -80,7 +80,7 @@ class MachineConsumer(StoppableThread):
         m = {"location": self.machine._profiler._errored}
         m["exc_class"] = str(e.__class__)
         m["exc_type"] = str(e.exception.__class__)
-        m["exc_tb"] = e.traceback
+        m["exc_tb"] = _get_traceback()
         m["exc_value"] = e.__repr__()
         dmsg = _format_dispatch_emsg(self, **kwargs)
         emsg = {"exception": m}
