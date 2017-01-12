@@ -122,6 +122,7 @@ def pfetch(vrt):
     wat = buf.compute(get=threaded_get)
 
     for key in _curl_pool.keys():
+        _curl_pool[key].close()
         del _curl_pool[key]
 
     return wat
