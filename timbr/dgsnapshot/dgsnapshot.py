@@ -96,7 +96,6 @@ def load_url(url):
     thread_id = threading.current_thread().ident
     _curl = _curl_pool[thread_id]
     finished = False
-    #print("fetching...", url)
     while not finished:
         with MemoryFile() as memfile:
             _curl.setopt(_curl.URL, url)
@@ -106,26 +105,16 @@ def load_url(url):
                 with memfile.open(driver="GTiff") as dataset:
                     arr = dataset.read()
                     finished = True
-            except rasterio.RasterioIOError:
-                print("Errored on {}".format(url))
+            except (TypeError, rasterio.RasterioIOError) as e:
+                print("Errored on {} with {}".format(url, e))
                 arr = np.zeros([8,256,256], dtype=np.float32)
     return arr
 
-def pfetch(vrt):
-    urls = collect_urls(vrt)
-    #print("fetching %d chips" % len(urls))
-    print("Starting parallel fetching... %d chips" % sum([len(x) for x in urls]) )
+def build_array(urls):
     buf = da.concatenate(
-        [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.uint16) for url in row],
+        [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.float32) for url in row],
                         axis=1) for row in urls], axis=2)
-    # NOTE: next line will execute
-    wat = buf.compute(get=threaded_get)
-
-    for key in _curl_pool.keys():
-        _curl_pool[key].close()
-        del _curl_pool[key]
-
-    return wat
+    return buf
 
 
 class WrappedGeoJSON(dict):
@@ -146,7 +135,6 @@ class WrappedGeoJSON(dict):
         url = build_url(self._gid, node=node, level=level)
         self._src = rasterio.open(url)
         self._roi = roi_from_bbox_projection(self._src, user_bounds)
-        #self._new_bounds = self._src.window_bounds(self._roi)
 
         window = self._roi.flatten()
         px_bounds = [window[0], window[1], window[0] + window[2], window[1] + window[3] ]
@@ -155,16 +143,18 @@ class WrappedGeoJSON(dict):
         with open(tmp_vrt, "w") as f:
             f.write(res.content)
 
-        image = pfetch(tmp_vrt)
-        print("Fetch complete")
-
+        dpath = "/{}_{}_{}".format(self._gid, node, level)
+        urls = collect_urls(tmp_vrt)
+        darr = build_array(urls)
         self._snapshot._fileh.close()
-        h = h5py.File(self._snapshot._filename, 'a')
-        self._dpath = "/{}_{}_{}".format( self._gid, node, level )
-        ds = h.create_dataset(self._dpath, image.shape, self._src.meta.get("dtype", "float32"))
-        ds[:,:,:] = image
-        h.flush()
-        h.close()
+
+        print("Starting parallel fetching... {} chips".format(sum([len(x) for x in urls])))
+        with dask.set_options(get=threaded_get):
+            darr.to_hdf5(self._snapshot._filename, dpath)
+        for key in _curl_pool.keys():
+            _curl_pool[key].close()
+            del _curl_pool[key]
+        print("Fetch complete")
 
         self._snapshot._fileh = tables.open_file(self._snapshot._filename, mode='r') #reopen snapfile w pytables
         self._snapshot._raw = self._snapshot._fileh.root.raw
