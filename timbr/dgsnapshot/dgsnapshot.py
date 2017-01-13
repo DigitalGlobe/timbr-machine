@@ -103,7 +103,6 @@ def load_url(url):
     finished = False
     while not finished:
         buf = BytesIO()
-        _curl.setopt(_curl.VERBOSE, True)
         _curl.setopt(_curl.URL, url)
         _curl.setopt(_curl.WRITEDATA, buf)
         _curl.perform()
