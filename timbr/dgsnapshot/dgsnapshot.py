@@ -98,6 +98,7 @@ def load_url(url):
     finished = False
     while not finished:
         with MemoryFile() as memfile:
+            _curl.setopt(_curl.VERBOSE, True)
             _curl.setopt(_curl.URL, url)
             _curl.setopt(_curl.WRITEDATA, memfile)
             _curl.perform()
