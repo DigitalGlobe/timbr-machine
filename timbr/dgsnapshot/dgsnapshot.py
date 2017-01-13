@@ -1,6 +1,11 @@
 from timbr.snapshot.snapshot import Snapshot
 from timbr.machine import serializer
 
+try:
+    from io import BytesIO
+except ImportError:
+    from StringIO import cStringIO as BytesIO
+
 import tables
 import h5py
 
@@ -97,18 +102,21 @@ def load_url(url):
     _curl = _curl_pool[thread_id]
     finished = False
     while not finished:
-        with MemoryFile() as memfile:
-            _curl.setopt(_curl.VERBOSE, True)
-            _curl.setopt(_curl.URL, url)
-            _curl.setopt(_curl.WRITEDATA, memfile)
-            _curl.perform()
-            try:
-                with memfile.open(driver="GTiff") as dataset:
-                    arr = dataset.read()
-                    finished = True
-            except (TypeError, rasterio.RasterioIOError) as e:
-                print("Errored on {} with {}".format(url, e))
-                arr = np.zeros([8,256,256], dtype=np.float32)
+        buf = BytesIO()
+        _curl.setopt(_curl.VERBOSE, True)
+        _curl.setopt(_curl.URL, url)
+        _curl.setopt(_curl.WRITEDATA, buf)
+        _curl.perform()
+        
+        with MemoryFile(buf.getvalue()) as memfile:
+          try:
+              with memfile.open(driver="GTiff") as dataset:
+                  arr = dataset.read()
+                  finished = True
+          except (TypeError, rasterio.RasterioIOError) as e:
+              print("Errored on {} with {}".format(url, e))
+              arr = np.zeros([8,256,256], dtype=np.float32)
+
     return arr
 
 def build_array(urls):
