@@ -3,7 +3,7 @@ from setuptools.command.develop import develop as _develop
 from setuptools.command.install import install as _install
 import os
 
-try: 
+try:
     from notebook.nbextensions import install_nbextension
     from notebook.services.config import ConfigManager
 except ImportError:
@@ -56,6 +56,7 @@ setup(name='timbr-machine',
             'timbr/static/index.js'
         ])
       ],
+      include_package_data=True,
       install_requires=[
           "pymongo>=2.8",
           "dask>=0.13.0",
