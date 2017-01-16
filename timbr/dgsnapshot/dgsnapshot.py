@@ -245,7 +245,7 @@ class WrappedGeoJSON(dict):
             if dataset.meta['count'] == 8:
                 bands = '4,2,1'
             else:
-                bands = '1'
+                bands = '0'
 
         bucket_name = 'idaho-images'
         idaho_id = self._gid
