@@ -115,7 +115,7 @@ def load_url(url, bands=8):
         _curl.setopt(_curl.URL, url)
         _curl.setopt(_curl.WRITEDATA, buf)
         _curl.perform()
-        
+
         with MemoryFile(buf.getvalue()) as memfile:
           try:
               with memfile.open(driver="GTiff") as dataset:
@@ -123,13 +123,13 @@ def load_url(url, bands=8):
                   finished = True
           except (TypeError, rasterio.RasterioIOError) as e:
               print("Errored on {} with {}".format(url, e))
-              arr = np.zeros([8,256,256], dtype=np.float32)
+              arr = np.zeros([bands,256,256], dtype=np.float32)
 
     return arr
 
 def build_array(urls, bands=8):
     buf = da.concatenate(
-        [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.float32) for url in row],
+        [da.concatenate([da.from_delayed(load_url(url), (bands,256,256), np.float32) for url in row],
                         axis=1) for row in urls], axis=2)
     return buf
 
@@ -216,7 +216,7 @@ class WrappedGeoJSON(dict):
             print(vrt_file)
             with rasterio.open(vrt_file) as src:
                 yield src
-        else: 
+        else:
             print("fetching image from vrt, writing to snapshot file and generating vrt reference")
             with rasterio.open(self.fetch(node=node, level=level)) as src:
                 yield src
@@ -238,7 +238,7 @@ class WrappedGeoJSON(dict):
                     os.environ['GBDX_CLIENT_ID'] = 'your client id'
                     os.environ['GBDX_CLIENT_SECRET'] = 'your client secrect'
                 """)
-        else: 
+        else:
             self.create_preview_map(gbdx_token, width=width, height=height)
 
     def create_preview_map(self, token, width=700, height=400):
@@ -250,14 +250,14 @@ class WrappedGeoJSON(dict):
 
         bucket_name = 'idaho-images'
         idaho_id = self._gid
-        try: 
+        try:
             W,S = self['geometry']['coordinates'][0][0]
             E,N = self['geometry']['coordinates'][0][2]
-        except: 
+        except:
             W,S = self['geometry']['coordinates'][0][0][0]
             E,N = self['geometry']['coordinates'][0][0][2]
         functionstring = "addLayerToMap('%s','%s',%s,%s,%s,%s);\n" % (bucket_name, idaho_id, W, S, E, N)
-        
+
         dir_name = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join( dir_name, 'leaflet_template.html'), 'r') as htmlfile:
             data=htmlfile.read().decode("utf8")
@@ -270,7 +270,7 @@ class WrappedGeoJSON(dict):
         data = data.replace('MAXX', str(E))
         data = data.replace('MAXY', str(N))
         return display(HTML(data), width=width, height=height)
-        
+
 
 
 class DGSnapshot(Snapshot):
