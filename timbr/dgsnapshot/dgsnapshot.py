@@ -106,7 +106,7 @@ def collect_urls(vrt):
 
 @delayed
 def load_url(url, bands=8):
-    print('fetching', url)
+    #print('fetching', url)
     thread_id = threading.current_thread().ident
     _curl = _curl_pool[thread_id]
     finished = False
