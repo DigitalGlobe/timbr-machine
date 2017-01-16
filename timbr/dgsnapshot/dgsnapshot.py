@@ -105,7 +105,8 @@ def collect_urls(vrt):
     return grid
 
 @delayed
-def load_url(url):
+def load_url(url, bands=8):
+    print('fetching', url)
     thread_id = threading.current_thread().ident
     _curl = _curl_pool[thread_id]
     finished = False
@@ -126,7 +127,7 @@ def load_url(url):
 
     return arr
 
-def build_array(urls):
+def build_array(urls, bands=8):
     buf = da.concatenate(
         [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.float32) for url in row],
                         axis=1) for row in urls], axis=2)
@@ -161,7 +162,7 @@ class WrappedGeoJSON(dict):
 
         dpath = "/{}_{}_{}".format(self._gid, node, level)
         urls = collect_urls(tmp_vrt)
-        darr = build_array(urls)
+        darr = build_array(urls, bands=self._src.meta['count'])
         self._snapshot._fileh.close()
 
         print("Starting parallel fetching... {} chips".format(sum([len(x) for x in urls])))
@@ -262,10 +263,12 @@ class WrappedGeoJSON(dict):
             data=htmlfile.read().decode("utf8")
 
         data = data.replace('FUNCTIONSTRING',functionstring)
-        data = data.replace('CENTERLAT',str(S))
-        data = data.replace('CENTERLON',str(W))
-        data = data.replace('BANDS',bands)
-        data = data.replace('TOKEN',token)
+        data = data.replace('BANDS', bands)
+        data = data.replace('TOKEN', token)
+        data = data.replace('MINX', str(W))
+        data = data.replace('MINY', str(S))
+        data = data.replace('MAXX', str(E))
+        data = data.replace('MAXY', str(N))
         return display(HTML(data), width=width, height=height)
         
 
