@@ -10,6 +10,7 @@ import tables
 import h5py
 
 import os
+import codecs
 import sys
 import json
 import inspect
@@ -18,6 +19,7 @@ from collections import defaultdict
 from itertools import groupby
 import threading
 import contextlib
+from IPython.display import display, HTML, IFrame
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -33,6 +35,8 @@ import dask
 from dask.delayed import delayed
 import dask.array as da
 import numpy as np
+
+from gbdxtools import Interface
 
 from osgeo import gdal
 gdal.UseExceptions()
@@ -217,8 +221,49 @@ class WrappedGeoJSON(dict):
                 yield src
 
     def vrt(self, node="TOAReflectance", level="0"):
-        # return vrt_file
         return build_url(self._gid, node=node, level=level)
+
+    def preview(self, gbdx_token=None, width=700, height=400):
+        if gbdx_token is None:
+            try:
+                gbdx = Interface()
+                gbdx_token = gbdx.gbdx_connection.access_token
+                self.create_preview_map(gbdx_token, width=width, height=height)
+            except:
+                print("""Missing GBDX Credentials, try either passing in 'gbdx_token' or define GBDX environment vars:
+                    import os
+                    os.environ['GBDX_USERNAME'] = 'your username'
+                    os.environ['GBDX_PASSWORD'] = 'your password'
+                    os.environ['GBDX_CLIENT_ID'] = 'your client id'
+                    os.environ['GBDX_CLIENT_SECRET'] = 'your client secrect'
+                """)
+        else: 
+            self.create_preview_map(gbdx_token, width=width, height=height)
+
+    def create_preview_map(self, token, width=700, height=400):
+        with rasterio.open(self.vrt()) as dataset:
+            if dataset.meta['count'] == 8:
+                bands = '4,2,1'
+            else:
+                bands = '1'
+
+        bucket_name = 'idaho-images'
+        idaho_id = self._gid
+        W,S = self['geometry']['coordinates'][0][0]
+        E,N = self['geometry']['coordinates'][0][2]
+        functionstring = "addLayerToMap('%s','%s',%s,%s,%s,%s);\n" % (bucket_name, idaho_id, W, S, E, N)
+        
+        dir_name = os.path.dirname(os.path.realpath(__file__))
+        with open(os.path.join( dir_name, 'leaflet_template.html'), 'r') as htmlfile:
+            data=htmlfile.read().decode("utf8")
+
+        data = data.replace('FUNCTIONSTRING',functionstring)
+        data = data.replace('CENTERLAT',str(S))
+        data = data.replace('CENTERLON',str(W))
+        data = data.replace('BANDS',bands)
+        data = data.replace('TOKEN',token)
+        return display(HTML(data), width=width, height=height)
+        
 
 
 class DGSnapshot(Snapshot):
