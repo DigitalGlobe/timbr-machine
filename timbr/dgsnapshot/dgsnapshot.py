@@ -129,7 +129,7 @@ def load_url(url, bands=8):
 
 def build_array(urls, bands=8):
     buf = da.concatenate(
-        [da.concatenate([da.from_delayed(load_url(url), (bands,256,256), np.float32) for url in row],
+        [da.concatenate([da.from_delayed(load_url(url, bands=bands), (bands,256,256), np.float32) for url in row],
                         axis=1) for row in urls], axis=2)
     return buf
 
