@@ -1,1 +1,1 @@
-include timbr/dgsnapshot/leaflet_template.html 
+recursive-include timbr-machine *.html
