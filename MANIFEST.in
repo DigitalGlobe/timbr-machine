@@ -1,1 +1,1 @@
-include *.html
+include timbr/dgsnapshot/leaflet_template.html 
