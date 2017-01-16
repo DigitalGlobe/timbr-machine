@@ -249,8 +249,12 @@ class WrappedGeoJSON(dict):
 
         bucket_name = 'idaho-images'
         idaho_id = self._gid
-        W,S = self['geometry']['coordinates'][0][0]
-        E,N = self['geometry']['coordinates'][0][2]
+        try: 
+            W,S = self['geometry']['coordinates'][0][0]
+            E,N = self['geometry']['coordinates'][0][2]
+        except: 
+            W,S = self['geometry']['coordinates'][0][0][0]
+            E,N = self['geometry']['coordinates'][0][0][2]
         functionstring = "addLayerToMap('%s','%s',%s,%s,%s,%s);\n" % (bucket_name, idaho_id, W, S, E, N)
         
         dir_name = os.path.dirname(os.path.realpath(__file__))
