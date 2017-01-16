@@ -200,12 +200,16 @@ class WrappedGeoJSON(dict):
     def _vrt_file(self, node, level):
         return os.path.join(self._vrt_dir, ".".join([self._gid, node, str(level) + ".vrt"]))
 
-    def vrt(self, node="TOAReflectance", level="0"):
+    def open(self, node="TOAReflectance", level="0"):
         vrt_file = self._vrt_file(node, level)
         if os.path.exists(vrt_file):
-            return vrt_file
+            return rasterio.open(vrt_file).read()
         print("fetching image from vrt, writing to snapshot file and generating vrt reference")
-        return self.fetch(node=node, level=level)
+        return rasterio.open(self.fetch(node=node, level=level)).read()
+
+    def vrt(self, node="TOAReflectance", level="0"):
+        # return vrt_file
+        return build_url(self._gid, node=node, level=level)
 
 
 class DGSnapshot(Snapshot):
