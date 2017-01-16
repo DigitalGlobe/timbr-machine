@@ -17,6 +17,10 @@ from functools import partial
 from collections import defaultdict
 from itertools import groupby
 import threading
+import contextlib
+
+import warnings
+warnings.filterwarnings('ignore')
 
 import requests
 from requests.compat import urljoin
@@ -200,12 +204,17 @@ class WrappedGeoJSON(dict):
     def _vrt_file(self, node, level):
         return os.path.join(self._vrt_dir, ".".join([self._gid, node, str(level) + ".vrt"]))
 
+    @contextlib.contextmanager
     def open(self, node="TOAReflectance", level="0"):
         vrt_file = self._vrt_file(node, level)
         if os.path.exists(vrt_file):
-            return rasterio.open(vrt_file).read()
-        print("fetching image from vrt, writing to snapshot file and generating vrt reference")
-        return rasterio.open(self.fetch(node=node, level=level)).read()
+            print(vrt_file)
+            with rasterio.open(vrt_file) as src:
+                yield src
+        else: 
+            print("fetching image from vrt, writing to snapshot file and generating vrt reference")
+            with rasterio.open(self.fetch(node=node, level=level)) as src:
+                yield src
 
     def vrt(self, node="TOAReflectance", level="0"):
         # return vrt_file
