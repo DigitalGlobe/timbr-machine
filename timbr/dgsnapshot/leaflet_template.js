@@ -1,11 +1,12 @@
 requirejs.config( {
     paths: { 
-      leaflet: "https://npmcdn.com/leaflet@1.0.0-rc.3/dist/leaflet"
+      leaflet: "https://npmcdn.com/leaflet@1.0.0-rc.3/dist/leaflet",
+      leaflet_draw: "https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.9/leaflet.draw"
     }
   }
 );
 
-requirejs(["leaflet"], function( leaflet ) {
+requirejs(["leaflet", "leaflet_draw"], function( leaflet, leaflet_draw ) {
     var link = document.createElement("link");
     link.type = "text/css";
     link.rel = "stylesheet";
