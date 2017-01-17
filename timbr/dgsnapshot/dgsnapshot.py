@@ -239,6 +239,15 @@ class WrappedGeoJSON(dict):
         else:
             self.create_preview_map(gbdx_token, width=width, height=height)
 
+    def read(self, bands=[], **kwargs):
+        for band in bands:
+            if not isinstance(band, int):
+                raise TypeError("Band arguments must be passed as integers")
+        with self.open(**kwargs) as src:
+            if len(bands) > 0:
+                return src.read(bands)
+            return src.read()
+
     def create_preview_map(self, token, width=700, height=400):
         with rasterio.open(self.vrt()) as dataset:
             if dataset.meta['count'] == 8:
