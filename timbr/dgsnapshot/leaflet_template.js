@@ -1,37 +1,35 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Leaflet Quick Start Guide Example</title>
-  <meta charset="utf-8" />
+requirejs.config( {
+    paths: { 
+      leaflet: "https://npmcdn.com/leaflet@1.0.0-rc.3/dist/leaflet",
+      leaflet_draw: "https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.9/leaflet.draw"
+    }
+  }
+);
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+requirejs(["leaflet", "leaflet_draw"], function( leaflet, leaflet_draw ) {
+    var link = document.createElement("link");
+    link.type = "text/css";
+    link.rel = "stylesheet";
+    link.href = "https://npmcdn.com/leaflet@1.0.0-rc.3/dist/leaflet.css";
+    document.getElementsByTagName("head")[0].appendChild(link);
 
-  <link rel="stylesheet" href="https://npmcdn.com/leaflet@1.0.0-rc.3/dist/leaflet.css" />
-  <script src="https://npmcdn.com/leaflet@1.0.0-rc.3/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.9/leaflet.draw-src.js"></script>
-  <style>
-        body {
-            padding: 0;
-            margin: 0;
-        }
-        html, body, #mapid {
-            height: 400px;
-            width: 100%;
-            z-index: 100;
-        }
-        .leaflet-control-container {
-          text-decoration: none; 
-        }
-        img.leaflet-tile {
-          margin:0px;
-        }
-    </style>
-</head>
-<body>
-  <div id="mapid"></div>
+    var div = document.createElement("div");
+    div.id = 'map';
+    element.append(div);
+   
+    var css = "#map { height: 400px;  width: 100%; z-index: 100; } .leaflet-control-container { text-decoration: none; } img.leaflet-tile { margin:0px; }";
+    var head = document.head || document.getElementsByTagName('head')[0];
+    var style = document.createElement('style');
 
-  <script>
-    var mymap = L.map('mapid');
+    style.type = 'text/css';
+    if (style.styleSheet){
+      style.styleSheet.cssText = css;
+    } else {
+      style.appendChild(document.createTextNode(css));
+    }
+    head.appendChild(style);
+ 
+    var mymap = L.map('map');
     L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpandmbXliNDBjZWd2M2x6bDk3c2ZtOTkifQ._QA7i5Mpkd_m30IGElHziw', {
       maxZoom: 18,
       attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
@@ -61,6 +59,4 @@
     }
     FUNCTIONSTRING
     mymap.fitBounds([[MINY, MINX],[MAXY, MAXX]]);
-  </script>
-</body>
-</html>
+});

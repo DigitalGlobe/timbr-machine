@@ -19,7 +19,7 @@ from collections import defaultdict
 from itertools import groupby
 import threading
 import contextlib
-from IPython.display import display, HTML, IFrame
+from IPython.display import display, Javascript
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -106,7 +106,7 @@ def collect_urls(vrt):
 
 @delayed
 def load_url(url, bands=8):
-    print('fetching', url)
+    #print('fetching', url)
     thread_id = threading.current_thread().ident
     _curl = _curl_pool[thread_id]
     buf = BytesIO()
@@ -120,15 +120,14 @@ def load_url(url, bands=8):
               arr = dataset.read()
       except (TypeError, rasterio.RasterioIOError) as e:
           print("Errored on {} with {}".format(url, e))
-          arr = np.zeros([8,256,256], dtype=np.float32)
+          arr = np.zeros([bands,256,256], dtype=np.float32)
           _curl.close()
           del _curl_pool[thread_id]
-
     return arr
 
 def build_array(urls, bands=8):
     buf = da.concatenate(
-        [da.concatenate([da.from_delayed(load_url(url), (8,256,256), np.float32) for url in row],
+        [da.concatenate([da.from_delayed(load_url(url, bands=bands), (bands,256,256), np.float32) for url in row],
                         axis=1) for row in urls], axis=2)
     return buf
 
@@ -258,7 +257,7 @@ class WrappedGeoJSON(dict):
         functionstring = "addLayerToMap('%s','%s',%s,%s,%s,%s);\n" % (bucket_name, idaho_id, W, S, E, N)
 
         dir_name = os.path.dirname(os.path.realpath(__file__))
-        with open(os.path.join( dir_name, 'leaflet_template.html'), 'r') as htmlfile:
+        with open(os.path.join( dir_name, 'leaflet_template.js'), 'r') as htmlfile:
             data=htmlfile.read().decode("utf8")
 
         data = data.replace('FUNCTIONSTRING',functionstring)
@@ -268,8 +267,7 @@ class WrappedGeoJSON(dict):
         data = data.replace('MINY', str(S))
         data = data.replace('MAXX', str(E))
         data = data.replace('MAXY', str(N))
-        return display(HTML(data), width=width, height=height)
-
+        return display(Javascript(data), width=width, height=height)
 
 
 class DGSnapshot(Snapshot):
