@@ -194,7 +194,7 @@ class WrappedGeoJSON(dict):
                                            "xSize": str(self._roi.num_cols), "ySize": str(self._roi.num_rows)})
 
             ET.SubElement(src, "SourceProperties", {"RasterXSize": str(self._roi.num_cols), "RasterYSize": str(self._roi.num_rows),
-                                                    "BlockXSize": "128", "BlockYSize": "128", "DataType": self._src.dtypes[i-1].title()})
+                                                    "BlockXSize": "256", "BlockYSize": "256", "DataType": self._src.dtypes[i-1].title()})
         vrt_str = ET.tostring(vrt)
 
 
