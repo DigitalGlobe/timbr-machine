@@ -19,3 +19,6 @@ def load_machine():
     MACHINE = Machine()
     MACHINE.start()
     return MACHINE
+
+if __name__ == "__main__":
+    MACHINE = load_machine()
