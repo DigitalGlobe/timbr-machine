@@ -68,11 +68,14 @@ def index_to_slice(ind, rowstep, colstep):
     window = ((i * rowstep, (i + 1) * rowstep), (j * colstep, (j + 1) * colstep))
     return window
 
-def roi_from_bbox_projection(src, user_bounds, preserve_blocksize=True):
+def roi_from_bbox_projection(src, user_bounds, block_shapes=None, preserve_blocksize=True):
     roi = src.window(*user_bounds)
     if not preserve_blocksize:
         return roi
-    blocksafe_roi = rasterio.windows.round_window_to_full_blocks(roi, src.block_shapes)
+    if block_shapes is None:
+        blocksafe_roi = rasterio.windows.round_window_to_full_blocks(roi, src.block_shapes)
+    else:
+        blocksafe_roi = rasterio.windows.round_window_to_full_blocks(roi, block_shapes)
     return blocksafe_roi
 
 def generate_blocks(window, blocksize):
@@ -131,6 +134,12 @@ def build_array(urls, bands=8):
                         axis=1) for row in urls], axis=2)
     return buf
 
+def ms_to_rgb(mbimage):
+    nbands, x, y = mbimage.shape
+    if nbands == 8:
+        rgb_uint8 = (np.dstack((mbimage[4,:,:], mbimage[2,:,:], mbimage[1,:,:])).clip(min=0) * 255.0).astype(np.uint8)
+        return rgb_uint8
+    return mbimage
 
 class WrappedGeoJSON(dict):
     def __init__(self, snapshot, data, vrt_dir="/home/gremlin/vrt"):
@@ -147,12 +156,16 @@ class WrappedGeoJSON(dict):
 
     def fetch(self, node="TOAReflectance", level="0"):
         user_bounds = parse_bounds(self._snapshot["bounds"])
+        self._user_bounds = user_bounds
         url = build_url(self._gid, node=node, level=level)
+        self._url = url
         self._src = rasterio.open(url)
-        self._roi = roi_from_bbox_projection(self._src, user_bounds)
+        block_shapes = [(256, 256) for bs in self._src.block_shapes]
+        self._roi = roi_from_bbox_projection(self._src, user_bounds, block_shapes=block_shapes)
 
         window = self._roi.flatten()
         px_bounds = [window[0], window[1], window[0] + window[2], window[1] + window[3] ]
+        self._px_bounds = px_bounds
         res = requests.get(url, params={"window": ",".join([str(c) for c in px_bounds])})
         tmp_vrt = os.path.join(self._vrt_dir, ".".join([".tmp", node, level, self._gid + ".vrt"]))
         with open(tmp_vrt, "w") as f:
@@ -194,7 +207,7 @@ class WrappedGeoJSON(dict):
                                            "xSize": str(self._roi.num_cols), "ySize": str(self._roi.num_rows)})
 
             ET.SubElement(src, "SourceProperties", {"RasterXSize": str(self._roi.num_cols), "RasterYSize": str(self._roi.num_rows),
-                                                    "BlockXSize": "256", "BlockYSize": "256", "DataType": self._src.dtypes[i-1].title()})
+                                                    "BlockXSize": "128", "BlockYSize": "128", "DataType": self._src.dtypes[i-1].title()})
         vrt_str = ET.tostring(vrt)
 
 
@@ -278,6 +291,25 @@ class WrappedGeoJSON(dict):
         data = data.replace('MAXY', str(N))
         return display(Javascript(data), width=width, height=height)
 
+    def to_geotiff(self, node="TOAReflectance", level="0"):
+        im = self.read(node=node, level=level))
+        nbands, height, width = im.shape
+        if nbands == 8:
+            rgb = ms_to_rgb(im)
+            rgb = np.rollaxis(rgb, 2, 0)
+        elif nbands = 1:
+            rgb = im
+        else:
+            raise TypeError
+        if path is None:
+            path = os.path.join(self._vrt_dir, ".".join([self._gid, node, level]) + ".tif")
+        with rasterio.open(path, "w",
+                           driver="GTiff",
+                           width=width,
+                           height=height,
+                           dtype=rgb.dtype,
+                           count=nbands) as dst:
+            dst.write(rgb)
 
 class DGSnapshot(Snapshot):
     def __init__(self, snapfile, vrt_dir="/home/gremlin/.vrt"):
@@ -309,7 +341,7 @@ class DGSnapshot(Snapshot):
         return self._lut[data["id"]]
 
     @classmethod
-    def from_geojson(cls, geojsonfile, snapfile=None, **kwargs):
+    def from_geojson(cls, geojsonfile, snapfile=None, bounds=None, **kwargs):
         with open(geojsonfile) as f:
             geojson = json.load(f)
         if snapfile is None:
@@ -331,7 +363,11 @@ class DGSnapshot(Snapshot):
         for f in features:
             raw.append(data_to_np(f))
         raw.attrs.type = geojson["type"]
-        raw.attrs.bounds = geojson["bounds"]
+        try:
+            raw.attrs.bounds = geojson["bounds"]
+        except KeyError as ke:
+            if bounds is not None:
+                raw.attrs.bounds = bounds
         snap.close()
 
         snap = h5py.File(snapfile)
