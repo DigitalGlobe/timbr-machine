@@ -275,19 +275,23 @@ def main():
     parser.add_argument("--wamp-realm", default=u"jupyter", help='Router realm')
     parser.add_argument("--wamp-url", default=u"wss://juno.timbr.io/wamp/route", help="WAMP Websocket URL")
     parser.add_argument("--token", type=unicode, help="OAuth token to connect to router")
-    parser.add_argument("--session-key", help="The kernel key that you want to register with")
+    parser.add_argument("--kernel-file", help="The kernel file with the session key that you want to register with")
     args = parser.parse_args()
 
     log.startLogging(sys.stdout)
 
+    with open(args.kernel_file, "r") as f:
+        d = json.load(f)
+        _session_key = d["key"]
+
     _capture_runner = ApplicationRunner(url=unicode(args.wamp_url), realm=unicode(args.wamp_realm),
                                         headers={"Authorization": "Bearer {}".format(args.token),
-                                                    "X-Kernel-ID": args.session_key})
+                                                    "X-Kernel-ID": _session_key})
 
 
     log.msg("Connecting to router: %s" % args.wamp_url)
     log.msg("  Project Realm: %s" % (args.wamp_realm))
 
-    _capture_runner.run(build_capture_component(args.session_key), start_reactor=False)
+    _capture_runner.run(build_capture_component(_session_key), start_reactor=False)
 
     reactor.run()
