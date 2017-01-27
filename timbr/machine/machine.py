@@ -338,3 +338,23 @@ class Machine(BaseMachine):
 
         machine._config = config
         return machine
+
+    @classmethod
+    def from_project(cls, project_path=None):
+        if prj_path is None:
+            prj_path = os.environ.get('TIMBR_PROJECT', None)
+        if prj_path is not None: # Otherwsie check if an env var is set
+            if not os.path.exists(prj_path):
+                os.makedirs(prj_path)
+            if os.path.isfile(os.path.join(prj_path, 'machine.json')):
+                config_file = os.path.join(prj_path, 'machine.json')
+                init_file = os.path.join(prj_path, '__init__.py')
+                MACHINE = Machine.from_json(config_file, init_path=init_file)
+                MACHINE.start()
+                return MACHINE
+        MACHINE = Machine()
+        MACHINE.start()
+        return MACHINE
+
+
+
