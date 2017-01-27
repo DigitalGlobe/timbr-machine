@@ -2,6 +2,7 @@ import dask.async
 from threading import Thread, Lock, Event, ThreadError
 import time
 import json
+import warnings
 
 try:
     from Queue import Empty, Full, Queue # Python 2
@@ -340,21 +341,28 @@ class Machine(BaseMachine):
         return machine
 
     @classmethod
-    def from_project(cls, project_path=None):
-        if prj_path is None:
-            prj_path = os.environ.get('TIMBR_PROJECT', None)
-        if prj_path is not None: # Otherwsie check if an env var is set
+    def from_project(cls, project_path):
+        try:
+            assert os.path.exists(project_path)
+            if os.path.isfile(os.path.join(project_path, 'machine.json')):
+                config_file = os.path.join(project_path, 'machine.json')
+                init_file = os.path.join(project_path, '__init__.py')
+                return cls.from_json(config_file, init_path=init_file)
+        except Exception as e:
+            raise EnvironmentError("Unexpected project structure and/or content.\n{}".format(e.message))
+
+    @classmethod
+    def load_machine(cls):
+        try:
+            prj_path = os.environ['TIMBR_PROJECT']
             if not os.path.exists(prj_path):
                 os.makedirs(prj_path)
-            if os.path.isfile(os.path.join(prj_path, 'machine.json')):
-                config_file = os.path.join(prj_path, 'machine.json')
-                init_file = os.path.join(prj_path, '__init__.py')
-                MACHINE = Machine.from_json(config_file, init_path=init_file)
-                MACHINE.start()
-                return MACHINE
-        MACHINE = Machine()
-        MACHINE.start()
-        return MACHINE
-
-
-
+            return cls.from_project(prj_path)
+        except KeyError:
+            warnings.warn("TIMBR_PROJECT not defined, instatiating empty Machine")
+            return Machine()
+        except EnvironmentError:
+            warnings.warn("Invalid Project, instantiating empty Machine")
+            return Machine()
+        except Exception as e:
+            warnings.warn("Unknown Error initializing machine:\n{}".format(e.message))
