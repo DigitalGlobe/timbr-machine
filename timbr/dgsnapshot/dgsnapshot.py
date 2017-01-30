@@ -297,7 +297,7 @@ class WrappedGeoJSON(dict):
         if nbands == 8:
             rgb = ms_to_rgb(im)
             rgb = np.rollaxis(rgb, 2, 0)
-        elif nbands = 1:
+        elif nbands == 1:
             rgb = im
         else:
             raise TypeError
