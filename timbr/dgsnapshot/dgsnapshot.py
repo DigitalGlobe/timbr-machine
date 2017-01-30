@@ -292,7 +292,7 @@ class WrappedGeoJSON(dict):
         return display(Javascript(data), width=width, height=height)
 
     def to_geotiff(self, node="TOAReflectance", level="0"):
-        im = self.read(node=node, level=level))
+        im = self.read(node=node, level=level)
         nbands, height, width = im.shape
         if nbands == 8:
             rgb = ms_to_rgb(im)
