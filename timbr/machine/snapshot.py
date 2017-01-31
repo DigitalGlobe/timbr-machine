@@ -361,7 +361,7 @@ def main():
     parser.add_argument("--wamp-realm", default=u"jupyter", help='Router realm')
     parser.add_argument("--wamp-url", default=u"wss://juno.timbr.io/wamp/route", help="WAMP Websocket URL")
     parser.add_argument("--token", type=unicode, help="OAuth token to connect to router")
-    parser.add_argument("kernel-file", help="The kernel file with the session key that you want to register with")
+    parser.add_argument("--kernel-file", help="The kernel file with the session key that you want to register with")
     args = parser.parse_args()
 
     with open(args.kernel_file, "r") as f:
