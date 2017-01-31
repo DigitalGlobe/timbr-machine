@@ -16,6 +16,7 @@ import argparse
 from collections import defaultdict
 import functools
 import re
+import json
 
 from bson.objectid import ObjectId
 import tables
