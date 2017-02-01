@@ -42,25 +42,6 @@ from timbr.machine.util import make_wamp_safe
 
 _snapshot_runner = None
 
-class LoggingEventHandler(RegexMatchingEventHandler):
-    def __init__(self):
-        super(LoggingEventHandler, self).__init__(ignore_regexes=['^.*\.log$'])
-
-    def on_any_event(self, event):
-        _logger.debug("Event Received [%s]" % type(event).__name__)
-
-    def on_modified(self, event):
-        _logger.debug("  Path Modified [%s]" % event.src_path)
-
-    def on_created(self, event):
-        _logger.debug("  Path Created [%s]" % event.src_path)
-
-    def on_deleted(self, event):
-        _logger.debug("  Path Deleted [%s]" % event.src_path)
-
-    def on_moved(self, event):
-        _logger.debug(" Path Moved [%s] -> [%s]" % (event.src_path, event.dest_path))
-
 
 def build_snapshot_component(kernel_key):
     class WampSnapshotComponent(ApplicationSession):
