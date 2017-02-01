@@ -28,10 +28,6 @@ from timbr.machine import serializer
 import logging
 _logger = logging.getLogger("timbr.snapshot")
 
-from watchdog.observers import Observer
-from watchdog.events import RegexMatchingEventHandler
-from watchdog.events import DirModifiedEvent
-
 from twisted.python import log
 from twisted.internet.defer import inlineCallbacks, returnValue, DeferredLock, DeferredQueue, Deferred
 from twisted.internet.task import cooperate
@@ -83,18 +79,9 @@ def build_snapshot_component(kernel_key):
 
             self._automount_queue = DeferredQueue()
             self._automount()
-            self.obs = Observer()
-            self._start_observer()
 
         def __del__(self):
             ApplicationSession.__del__(self)
-            self.obs.stop()
-
-        def _start_observer(self):
-            watch = self.obs.schedule(LoggingEventHandler(), self.path, recursive=False)
-            se_handler = SnapshotFileEventHandler(self)
-            self.obs.add_handler_for_watch(se_handler, watch)
-            self.obs.start()
 
         @inlineCallbacks
         def onJoin(self, details):
@@ -307,46 +294,6 @@ def build_snapshot_component(kernel_key):
         def onDisconnect(self):
             log.msg("WampSnapshotComponent] onDisconnect()")
 
-
-    class SnapshotFileEventHandler(RegexMatchingEventHandler):
-        def __init__(self, snapd):
-            self.snapd = snapd
-            self.reactor = reactor
-            super(SnapshotFileEventHandler, self).__init__(['^.*\.h5$'],
-                                                           ignore_regexes=['^.*\%s\.(?!\d+-shdw~)[^\%s]+\.h5$' % (os.path.sep, os.path.sep)])
-            self._shadow_pattern = re.compile(r'^.*\%s\.(\d+-shdw~)[^\%s]+\.h5$' % (os.path.sep, os.path.sep))
-            self._shadow_replacement_pattern = re.compile(r'\%s\.\d+-shdw~([^\%s]+\.h5)$' % (os.path.sep, os.path.sep))
-
-        def on_deleted(self, event):
-            if event.src_path in self.snapd._lut:
-                self.reactor.callInThread(self.snapd.unmount(self.snapd._lut[event.src_path]))
-            elif self._shadow_pattern.match(event.src_path):
-                dirty_path = re.sub(self._shadow_replacement_pattern, r'%s\1' % os.path.sep, event.src_path)
-                # NOTE: since we sync in-process, we don't need to act on shadow file deletions
-
-        def on_created(self, event):
-            _logger.debug("on_created called with src_path: %s" % event.src_path)
-            if not self._shadow_pattern.match(event.src_path):
-                # NOTE: this indicates that a snapshot has started
-                self.on_modified(event)
-
-        def on_modified(self, event):
-            if isinstance(event, DirModifiedEvent):
-                return
-            if not self._shadow_pattern.match(event.src_path):
-                # NOTE: indicates that data was written to the snapshot file (not the shadow file)
-                # This is needed so that snapshots will get automounted.
-                self.reactor.callInThread(self.snapd.mark_as_dirty, event.src_path)
-
-        def on_moved(self, event):
-            # NOTE: doesn't use the automount queue (but also is a rare or nonexistent event)
-            if event.src_path in self.snapd._lut:
-                self.reactor.callInThread(self.snapd.unmount(self.snapd._lut[event.src_path]))
-            self.reactor.callInThread(self.snapd.mount, event.dest_path)
-
-        def on_any_event(self, event):
-            filename = os.path.split(event.src_path)[-1]
-            _logger.debug("Detected change in file: %s" % filename)
 
     return WampSnapshotComponent(kernel_key)
 
