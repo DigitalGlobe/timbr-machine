@@ -366,3 +366,4 @@ class Machine(BaseMachine):
             return Machine()
         except Exception as e:
             warnings.warn("Unknown Error initializing machine:\n{}".format(e.message))
+            return Machine()
