@@ -324,6 +324,7 @@ class Machine(BaseMachine):
 
         _stages = max(8, len(config["functions"]))
         machine = cls(stages=_stages, **kwargs)
+        machine._config = config
 
         for i in range(len(config["functions"])):
             if config["functions"][i] is not None:
@@ -334,10 +335,11 @@ class Machine(BaseMachine):
         if len(config["source"]) > 0:
             _source = getattr(main, config["source"][0])
             if callable(_source):
+                if _source.__code__.co_argcount > 0:
+                    return machine # This implies that user needs to instantiate generator function w/ args
                 _source = _source()
             machine.source = iter(_source)
 
-        machine._config = config
         return machine
 
     @classmethod
