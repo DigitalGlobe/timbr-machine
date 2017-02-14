@@ -350,6 +350,8 @@ class Machine(BaseMachine):
                 config_file = os.path.join(project_path, 'machine.json')
                 init_file = os.path.join(project_path, '__init__.py')
                 return cls.from_json(config_file, init_path=init_file)
+            else:
+                return cls()
         except Exception as e:
             raise EnvironmentError("Unexpected project structure and/or content.\n{}".format(e.message))
 
@@ -362,10 +364,10 @@ class Machine(BaseMachine):
             return cls.from_project(prj_path)
         except KeyError:
             warnings.warn("TIMBR_PROJECT not defined, instatiating empty Machine")
-            return Machine()
+            return cls()
         except EnvironmentError:
             warnings.warn("Invalid Project, instantiating empty Machine")
-            return Machine()
+            return cls()
         except Exception as e:
             warnings.warn("Unknown Error initializing machine:\n{}".format(e.message))
-            return Machine()
+            return cls()
