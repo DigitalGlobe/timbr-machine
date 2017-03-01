@@ -31,6 +31,7 @@ _logger = logging.getLogger("timbr.snapshot")
 from twisted.python import log
 from twisted.internet.defer import inlineCallbacks, returnValue, DeferredLock, DeferredQueue, Deferred
 from twisted.internet.task import cooperate
+from twisted.internet.error import ConnectionRefusedError
 
 from autobahn.twisted.wamp import ApplicationRunner, ApplicationSession
 from autobahn.twisted.util import sleep
@@ -270,8 +271,8 @@ def build_snapshot_component(kernel_key):
         def onLeave(self, details):
             log.msg("[WampSnapshotComponent] onLeave()")
             log.msg("details: %s" % str(details))
-            reactor.callLater(0.25, _snapshot_runner.run, build_snapshot_component(self._kernel_key), start_reactor=False)
-
+            super(self.__class__, self).onLeave(details)
+        
         def onDisconnect(self):
             log.msg("WampSnapshotComponent] onDisconnect()")
 
@@ -305,6 +306,20 @@ def main():
     log.msg("Connecting to router: %s" % args.wamp_url)
     log.msg("  Project Realm: %s" % (args.wamp_realm))
 
-    _snapshot_runner.run(build_snapshot_component(_session_key), start_reactor=False)
+    @inlineCallbacks
+    def reconnector():
+        while True:
+            try:
+                log.msg("Snapshot component attempting to connect...")
+                snapdconnection = yield _snapshot_runner.run(build_snapshot_component(_session_key), start_reactor=False)
+                log.msg(snapdconnection)
+                yield sleep(10.0) # Give the connection time to set _session
+                while snapdconnection.isOpen():
+                    yield sleep(5.0)
+            except ConnectionRefusedError as ce:
+                log.msg("Snapshot component: ConnectionRefusedError; Trying to reconnect... ")
+                yield sleep(1.0)
+
+    reconnector()
 
     reactor.run()

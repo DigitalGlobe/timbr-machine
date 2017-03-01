@@ -14,6 +14,7 @@ from txzmq import ZmqEndpoint, ZmqFactory, ZmqSubConnection
 from twisted.python import log
 from twisted.internet.defer import inlineCallbacks, returnValue, DeferredLock
 from twisted.internet.task import cooperate, LoopingCall
+from twisted.internet.error import ConnectionRefusedError
 
 from autobahn.twisted.wamp import ApplicationRunner, ApplicationSession
 from autobahn.wamp.exception import ApplicationError
@@ -258,7 +259,7 @@ def build_capture_component(kernel_key):
             self._flush()
             log.msg("[WampCaptureComponent] onLeave()")
             log.msg("details: %s" % str(details))
-            reactor.callLater(0.25, _capture_runner.run, build_capture_component(self._kernel_key), start_reactor=False)
+            super(self.__class__, self).onLeave(details)
 
         def onDisconnect(self):
             log.msg("[WampCaptureComponent] onDisconect")
@@ -292,6 +293,20 @@ def main():
     log.msg("Connecting to router: %s" % args.wamp_url)
     log.msg("  Project Realm: %s" % (args.wamp_realm))
 
-    _capture_runner.run(build_capture_component(_session_key), start_reactor=False)
+    @inlineCallbacks
+    def reconnector():
+        while True:
+            try:
+                log.msg("Capture component attempting to connect...")
+                captdconnection = yield _capture_runner.run(build_capture_component(_session_key), start_reactor=False)
+                log.msg(captdconnection)
+                yield sleep(10.0) # Give the connection time to set _session
+                while captdconnection.isOpen():
+                    yield sleep(5.0)
+            except ConnectionRefusedError as ce:
+                log.msg("Capture component: ConnectionRefusedError; Trying to reconnect... ")
+                yield sleep(1.0)
+
+    reconnector()
 
     reactor.run()
