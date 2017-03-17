@@ -298,6 +298,26 @@ class Machine(BaseMachine):
 
         return self.serialize_fn(json_serializable_exception(e, _traceback=tb, **kwargs))
 
+    def _configure(self, config):
+        assert self.source is None
+        self._config = config
+
+        main = sys.modules['__main__']
+
+        for i in range(len(config["functions"])):
+            if config["functions"][i] is not None:
+                if config["functions"][i][0] is not None:
+                    f = getattr(main, config["functions"][i][0])
+                    self[i] = f
+
+        if len(config["source"]) > 0:
+            _source = getattr(main, config["source"][0])
+            if callable(_source):
+                if _source.__code__.co_argcount > 0:
+                    return self # This implies that user needs to instantiate generator function w/ args
+                _source = _source()
+            self.source = iter(_source)
+
     @classmethod
     def from_json(cls, config_path, init_path=None, **kwargs):
         with open(config_path, "r") as f:
