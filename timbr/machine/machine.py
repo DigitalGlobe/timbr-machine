@@ -260,7 +260,10 @@ class Machine(BaseMachine):
         if self._source_thread is not None and self._source_thread.is_alive():
             self._source_thread.stop()
             self._source_thread.join(timeout=1.0)
+
         self._source_thread = None
+        self._data_prev.clear()
+        self._error_prev.clear()
 
     @property
     def running(self):
