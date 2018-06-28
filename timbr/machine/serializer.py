@@ -3,18 +3,28 @@ import base64
 import os.path
 import tempfile
 import mimetypes
-from cStringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    import io
+    StringIO = io.BytesIO
 
 import simplejson as json
 
 import numpy as np
-import urllib2
+try:
+    import urllib2
+    ADDINFOURL = urllib2.addinfourl
+except ImportError:
+    from urllib.request import addinfourl
+    ADDINFOURL = addinfourl
+
 
 def custom_encode(obj):
     if isinstance(obj, long):
         return {"__type__": "long",
                 "__data__": str(obj)}
-    elif isinstance(obj, urllib2.addinfourl):
+    elif isinstance(obj, ADDINFOURL):
         data = obj.read()
         return {"__type__": "file",
                 "__name__": obj.geturl(),

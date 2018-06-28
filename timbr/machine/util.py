@@ -24,7 +24,7 @@ import inspect
 
 def wrap_transform(fn):
     """
-    This function returns a new function that accepts 
+    This function returns a new function that accepts
     an arbitrary number of arguments
     and calls the wrapped function with the number of arguments that it supports. For
     example:
@@ -57,7 +57,7 @@ def json_serializable_exception(e, **kwargs):
         exc["exc_class"] = str(e.__class__)
         exc["exc_type"] = str(e.exception.__class__)
         exc["exc_tb"] = e.traceback
-    except AttributeError, ae:
+    except AttributeError as ae:
         pass
     emsg["_exception"].update(exc)
     emsg["_exception"].update(kwargs)
@@ -78,7 +78,7 @@ def mkdir_p(path):
 # http://stackoverflow.com/questions/12700893/how-to-check-if-a-string-is-a-valid-python-identifier-including-keyword-check
 
 import ast
-import types 
+import types
 
 def isidentifier(ident):
     """Determines, if string is valid Python identifier."""
@@ -131,7 +131,7 @@ class OrderedDefaultDict(OrderedDict):
         super(OrderedDefaultDict, self).__init__(*args, **kwargs)
         assert callable(default_factory)
         self.default_factory = default_factory
-        
+
     def __getitem__(self, key):
         try:
             return super(OrderedDefaultDict, self).__getitem__(key)
