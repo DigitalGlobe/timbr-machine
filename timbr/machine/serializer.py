@@ -1,27 +1,31 @@
+import six
 import types
 import base64
 import os.path
 import tempfile
 import mimetypes
-try:
-    from cStringIO import StringIO
-except ImportError:
-    import io
-    StringIO = io.BytesIO
-
 import simplejson as json
-
 import numpy as np
-try:
+
+if six.PY2:
+    from cStringIO import StringIO
     import urllib2
     ADDINFOURL = urllib2.addinfourl
-except ImportError:
+    import io
+    StringIO = io.BytesIO
+    INT_TYPES = (int, long)
+
+if six.PY3:
+    import io
+    StringIO = io.BytesIO
     from urllib.request import addinfourl
     ADDINFOURL = addinfourl
+    INT_TYPES = (int)
+    long = int
 
 
 def custom_encode(obj):
-    if isinstance(obj, long):
+    if isinstance(obj, INT_TYPES):
         return {"__type__": "long",
                 "__data__": str(obj)}
     elif isinstance(obj, ADDINFOURL):
