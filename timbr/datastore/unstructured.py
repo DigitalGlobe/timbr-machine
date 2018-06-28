@@ -54,7 +54,7 @@ class AbstractUnstructuredStore(object):
         _segments = self.segments(key)
         try:
             last_segment = [int(s[1:]) for s in _segments if s != "current"][-1]
-        except IndexError, ie:
+        except IndexError as ie:
             last_segment = 0
         return last_segment
 

@@ -46,7 +46,7 @@ class UnstructuredStore(AbstractUnstructuredStore):
     def segments(self, key):
         try:
             return [segment.name for segment in self._groups[key]._f_iter_nodes("VLArray")]
-        except KeyError, ke:
+        except KeyError as ke:
             return None
 
     def nrows(self, key, segment):
@@ -70,7 +70,7 @@ class UnstructuredStore(AbstractUnstructuredStore):
         else:
             try:
                 self._groups[key].current.flush()
-            except KeyError, ke:
+            except KeyError as ke:
                 # ignore attempts to flush missing captures
                 pass
 

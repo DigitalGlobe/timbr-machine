@@ -72,7 +72,7 @@ class StructuringFunction(object):
                 try:
                     match = jsonpath_expr.find(rec)[0].value
                     return castfn(match)
-                except (KeyError, IndexError, TypeError, ValueError), e:
+                except (KeyError, IndexError, TypeError, ValueError) as e:
                     # NOTE: we return the default value on nearly any exception.  need to be careful
                     # about data corruption resulting from this.
                     return castfn(spec['input_default_val'])
@@ -120,7 +120,7 @@ class Snapshot(WrappedRawArray):
         self._fileh = tables.open_file(filename, mode='r')
         try:
             super(Snapshot, self).__init__(self._fileh.root.raw)
-        except tables.NoSuchNodeError, ne:
+        except tables.NoSuchNodeError as ne:
             self._fileh.close()
             raise IOError("Snapshot corrupted or not ready yet: %s" % str(ne))
 
@@ -146,7 +146,7 @@ class Snapshot(WrappedRawArray):
     def tables(self):
         try:
             return self._fileh.root.tables._v_leaves.keys()
-        except tables.NoSuchNodeError, ne:
+        except tables.NoSuchNodeError as ne:
             warnings.warn("'tables' group doesn't exist in '%s'.  No tables have been created yet." % self._filename)
             return []
 
@@ -162,9 +162,9 @@ class Snapshot(WrappedRawArray):
             try:
                 shadow = tables.open_file(shadowfile, "r")
                 tbls.extend(shadow.root.tables._v_leaves.keys())
-            except tables.NoSuchNodeError, ne:
+            except tables.NoSuchNodeError as ne:
                 shadow.close()
-            except (IOError, tables.HDF5ExtError), e:
+            except (IOError, tables.HDF5ExtError) as e:
                 warnings.warn("Shadow file '%s' doesn't exists or is unreadable.  No pending tables exist." % shadowfile)
             finally:
                 try:
@@ -180,7 +180,7 @@ class Snapshot(WrappedRawArray):
         try:
             shadow = tables.open_file(self._shadow_file, "a")
             shadow.flush()
-        except (tables.HDF5ExtError, ValueError), e:
+        except (tables.HDF5ExtError, ValueError) as e:
             _logger.info("Unable to open shadow file in read-write mode.  Giving up.")
             return False
 
@@ -218,7 +218,7 @@ class Snapshot(WrappedRawArray):
                 # TODO process raw -> dense via map
             else:
                 raise NotImplementedError("%s is not a known table style." % style)
-        except tables.HDF5ExtError, e:
+        except tables.HDF5ExtError as e:
             # Something important failed.  Try and clean up.
             if "raw" in shadow.root:
                 shadow.remove_node(shadow.root, "raw")
@@ -249,12 +249,12 @@ class Snapshot(WrappedRawArray):
         try:
             self._fileh = tables.open_file(self._filename, mode)
             self._raw = self._fileh.root.raw
-        except (ValueError, tables.HDF5ExtError), e:
+        except (ValueError, tables.HDF5ExtError) as e:
             # If we couldn't open file in write mode, try the other.  Either way raise exception
             if mode == "a":
                 try:
                     self.reset()
-                except IOError, ioe:
+                except IOError as ioe:
                     warnings.warn("Unable to recover from inaccessible snapshot file.")
             raise IOError("Unable to open snapshot file '%s' in mode '%s': \n%s" % (self._filename, mode, str(e)))
 
@@ -273,11 +273,11 @@ class Snapshot(WrappedRawArray):
                 try:
                     table._f_copy(self._fileh.root.tables, table._v_name)
                     num_copied = num_copied + 1
-                except tables.NodeError, ne:
+                except tables.NodeError as ne:
                     warnings.warn("A table named '%s' already exists in snapshot file." % table._v_name)
             os.remove(shadowfile)
             return (num_tables, num_copied)
-        except (ValueError, tables.HDF5ExtError), e:
+        except (ValueError, tables.HDF5ExtError) as e:
             # NOTE: this file is not our responsibility yet.  Something else must be working on it
             return (None, None) # -> means "pending"
         except tables.NoSuchNodeError:

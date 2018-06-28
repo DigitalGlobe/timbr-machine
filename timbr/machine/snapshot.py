@@ -112,7 +112,7 @@ def build_snapshot_component(kernel_key):
                     try:
                         self._snapshots[key] = Snapshot(path)
                         self._pending_tables[key] = set(self._snapshots[key].pending_tables)
-                    except (IOError, ValueError), ne:
+                    except (IOError, ValueError) as ne:
                         _logger.warn("Unable to mount snapshot %s: %s" % (path, str(ne)))
                         return None
                     self._lut[path] = key
@@ -143,11 +143,11 @@ def build_snapshot_component(kernel_key):
                 del self._snapshots[key]
                 try:
                     del self._pending_tables[key]
-                except KeyError, ke:
+                except KeyError as ke:
                     pass # no locks have been used for this key
                 try:
                     del self._sync_locks[key]
-                except KeyError, ke:
+                except KeyError as ke:
                     pass # no locks have been used for this key
 
             if key in self._snapshots:
@@ -217,7 +217,7 @@ def build_snapshot_component(kernel_key):
                         result = yield threads.deferToThread(self._snapshots[key].sync)
                         self._pending_tables[key] = set(self._snapshots[key].pending_tables)
                         returnValue(result)
-                    except IncompleteSyncError, e:
+                    except IncompleteSyncError as e:
                         pass
 
             result = yield self._lock.run(critical)
@@ -252,10 +252,10 @@ def build_snapshot_component(kernel_key):
                     yield self.mount(path, remount=True)
                 else:
                     yield self.mount(path)
-            except tables.HDF5ExtError, e:
+            except tables.HDF5ExtError as e:
                 # empty or (temporarily?) corrupt file
                 _logger.debug("Empty or temporarily corrupt file %s: %s" % (path, str(e)))
-            except ValueError, ve:
+            except ValueError as ve:
                 # the file is already open somewhere else
                 _logger.debug("File %s already open somewhere else: %s" % (path, str(ve)))
             self._mount_locks[path].release()
@@ -272,7 +272,7 @@ def build_snapshot_component(kernel_key):
             log.msg("[WampSnapshotComponent] onLeave()")
             log.msg("details: %s" % str(details))
             super(self.__class__, self).onLeave(details)
-        
+
         def onDisconnect(self):
             log.msg("WampSnapshotComponent] onDisconnect()")
 

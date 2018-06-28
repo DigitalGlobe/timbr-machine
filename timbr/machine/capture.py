@@ -96,7 +96,7 @@ def build_capture_component(kernel_key):
         def _flush(self):
             try:
                 self._datastore.flush()
-            except Exception, e:
+            except Exception as e:
                 log.msg("Exception caught in _auto_flush: %s" % str(e))
 
         @inlineCallbacks
