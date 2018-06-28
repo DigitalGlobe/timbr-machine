@@ -19,7 +19,7 @@ from timbr.machine.exception import UpstreamError
 from timbr.machine.util import StoppableThread, mkdir_p, json_serializable_exception, identity
 from bson.objectid import ObjectId
 from collections import deque
-from observed import event
+#from observed import event
 import warnings
 import os
 import sys
@@ -186,7 +186,7 @@ class Machine(BaseMachine):
     def __str__(self):
         return "Machine"
 
-    @event
+#    @event
     def start(self):
         self.create_dispatcher()
         if self._consumer_thread is None or not self._consumer_thread.is_alive():
@@ -210,7 +210,7 @@ class Machine(BaseMachine):
                     self._source_thread.start()
                 return
 
-    @event
+#    @event
     def stop(self, clear_buffer=True, hard_stop=False):
         if self._consumer_thread is not None and self._consumer_thread.is_alive():
             self._consumer_thread.pause() # pause consumer thread
