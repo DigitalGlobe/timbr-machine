@@ -286,7 +286,7 @@ class Machine(BaseMachine):
 
     def _build_output_on_error(self, e, formatter=json_serializable_exception):
         errored_task = self._profiler._errored
-        tasks = [[t, t + "_s"] for t in ["oid", "in"] + ["f{}".format(i) for i in xrange(self.stages)]]
+        tasks = [[t, t + "_s"] for t in ["oid", "in"] + ["f{}".format(i) for i in range(self.stages)]]
         output = []
         for fn, fn_s in tasks:
             try:

@@ -64,8 +64,8 @@ class BaseMachine(object):
             "oid_s": (str, "oid"),
             "in_s": (self.serialize_fn, "in")
         }
-        self.REFERENCE_DASK.update({"f{}_s".format(i): (self.serialize_fn, "f{}".format(i)) for i in xrange(self.stages)})
-    
+        self.REFERENCE_DASK.update({"f{}_s".format(i): (self.serialize_fn, "f{}".format(i)) for i in range(self.stages)})
+
     def put(self, msg):
         # NOTE: Non-blocking
         self.q.put(msg, False)
@@ -73,7 +73,7 @@ class BaseMachine(object):
     def get(self, block=False, timeout=0.5):
         dsk = dict(self.dsk)
         dsk["in"] = (self.q.get, block, timeout)
-        output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)])
+        output = self._getter(dsk, ["oid_s", "in_s"] + ["f{}_s".format(i) for i in range(self.stages)])
         return output
 
     def display_status(self, interval=1):
@@ -127,9 +127,9 @@ class BaseMachine(object):
     def __call__(self, data, include_serialized=False):
         dsk = dict(self.dsk)
         dsk["in"] = data
-        args = ["oid", "in"] + ["f{}".format(i) for i in xrange(self.stages)]
+        args = ["oid", "in"] + ["f{}".format(i) for i in range(self.stages)]
         if include_serialized:
-            args.extend(["oid_s", "in_s"] + ["f{}_s".format(i) for i in xrange(self.stages)])
+            args.extend(["oid_s", "in_s"] + ["f{}_s".format(i) for i in range(self.stages)])
 
         output = self._getter(dsk, args)
         return output
@@ -139,12 +139,12 @@ class BaseMachine(object):
         if self._dsk is None or self.dirty:
             self._dsk = {}
             self._dsk["oid"] = (ObjectId,)
-            for i in xrange(self.stages):
+            for i in range(self.stages):
                 fkey = "f{}".format(i)
                 cmd = [self.tbl.get(fkey, wrap_transform(identity))]
-                cmd.extend(["f{}".format(j) for j in reversed(xrange(i)) if i > 0])
+                cmd.extend(["f{}".format(j) for j in reversed(range(i)) if i > 0])
                 cmd.append("in")
-                cmd.extend(["f{}_s".format(j) for j in reversed(xrange(i)) if i > 0])
+                cmd.extend(["f{}_s".format(j) for j in reversed(range(i)) if i > 0])
                 cmd.append("in_s")
                 self._dsk[fkey] = tuple(cmd)
             self._dsk.update(self.REFERENCE_DASK)

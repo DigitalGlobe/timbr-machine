@@ -7,8 +7,8 @@ try:
 except ImportError:
     from queue import Empty, Full, Queue # Python 3
 
-import dask.async
 from dask.threaded import get
+from dask.multiprocessing import RemoteException
 import functools
 from timbr.machine.util import identity, wrap_transform, json_serializable_exception
 from bson.objectid import ObjectId
@@ -40,7 +40,7 @@ class TestBaseMachine(unittest.TestCase):
         self.assertIs(self.bm.serialize_fn, json_serialize)
 
         RD = {"oid_s": (str, "oid"), "in_s": (self.bm.serialize_fn, "in")}
-        D = {"f{}_s".format(i): (self.bm.serialize_fn, "f{}".format(i)) for i in xrange(self.bm.stages)}
+        D = {"f{}_s".format(i): (self.bm.serialize_fn, "f{}".format(i)) for i in range(self.bm.stages)}
         RD.update(D)
         self.assertDictEqual(self.bm.REFERENCE_DASK, RD)
 
@@ -86,7 +86,7 @@ class TestBaseMachine(unittest.TestCase):
         expected.extend(serialized)
         self.assertEqual(res_s, tuple(expected))
 
-        with self.assertRaises(dask.async.RemoteException):
+        with self.assertRaises(RemoteException):
             self.bm("incorrect data type")
 
         # Test put, get
