@@ -1,5 +1,5 @@
-import dask.async
 from threading import Thread, Lock, Event, ThreadError
+from dask.multiprocessing import RemoteException
 import time
 import json
 import warnings
@@ -103,7 +103,7 @@ class MachineConsumer(StoppableThread):
                 self._socket.send_multipart(payload)
             except Empty: # This is an instance of RemoteException, so needs to be caught first
                 continue
-            except dask.async.RemoteException as re:
+            except RemoteException as re:
                 # re derives from dask's RemoteException
                 output = self.machine._build_output_on_error(re)
                 hdr = output[0]
