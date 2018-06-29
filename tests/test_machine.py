@@ -1,8 +1,11 @@
 import unittest
-from mock import MagicMock, call
+try:
+    from mock import MagicMock, call
+except ImportError:
+    from unittest.mock import MagicMock, call
 
 from timbr.machine.base_machine import BaseMachine, json_serialize
-from timbr.machine import Machine 
+from timbr.machine import Machine
 from timbr.machine.machine import SourceConsumer, MachineConsumer
 
 try:
@@ -46,7 +49,7 @@ class TestSourceConsumer(unittest.TestCase):
         self.mm.put = MagicMock()
         self.sc.start()
         self.sc.join()
-        self.assertFalse(self.sc.stopped()) 
+        self.assertFalse(self.sc.stopped())
         self.assertFalse(self.sc.isAlive())
 
     def test_SourceConsumer_stops_on_Full(self):
@@ -76,7 +79,7 @@ class TestSourceConsumer(unittest.TestCase):
 class TestException(Exception):
     def __init__(self, msg):
         self.msg = msg
-        
+
 def raise_an_exception():
     raise TestException("Deal with it")
 
@@ -138,7 +141,7 @@ class TestMachine(unittest.TestCase):
         self.assertTrue(self.m.debug)
         self.m.put(10) # Will raise error in thread
         time.sleep(1.0)
-        self.assertFalse(self.m.running) 
+        self.assertFalse(self.m.running)
 
     def tearDown(self):
         try:
