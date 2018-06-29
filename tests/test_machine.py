@@ -23,7 +23,7 @@ import contextlib
 import warnings
 
 def configurable_gn(s):
-    for i in xrange(s):
+    for i in range(s):
         yield i
 
 class MockMachine(object):
@@ -42,7 +42,7 @@ class TestSourceConsumer(unittest.TestCase):
         self.mm.put = MagicMock()
         self.sc.start()
         self.sc.join()
-        self.assertEqual([call(i) for i in xrange(10)], self.mm.put.call_args_list)
+        self.assertEqual([call(i) for i in range(10)], self.mm.put.call_args_list)
 
     def test_SourceConsumer_stops_on_StopIteration(self):
         self.mm.put = MagicMock()
@@ -60,7 +60,7 @@ class TestSourceConsumer(unittest.TestCase):
 
     def test_SourceConsumer_behavior_on_other_exceptions(self):
         def raise_Exception_gn():
-            for i in xrange(10): # will never go past 5
+            for i in range(10): # will never go past 5
                 yield float(i)/(5-i)
         self.sc = SourceConsumer(self.mm, raise_Exception_gn())
         self.sc.start()
