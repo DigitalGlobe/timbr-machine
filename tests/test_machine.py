@@ -13,7 +13,6 @@ try:
 except ImportError:
     from queue import Empty, Full, Queue # Python 3
 
-import dask.async
 from dask.threaded import get
 import functools
 from timbr.machine.util import identity, wrap_transform, json_serializable_exception, StoppableThread
