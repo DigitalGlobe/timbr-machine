@@ -49,7 +49,7 @@ class TestBaseMachine(unittest.TestCase):
         self.bm[0] = fn_a
         f = self.bm[0]
         self.assertEqual(f(7, 5, 8, 9, 10, 11, "q"), fn_a(7))
-        self.assertEqual(f.func_name, "wrapped")
+        self.assertEqual(f.__name__, "wrapped")
 
         # Test __len__
         self.assertEqual(len(self.bm), self.bm.stages)

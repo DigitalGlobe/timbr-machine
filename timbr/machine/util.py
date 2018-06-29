@@ -21,6 +21,11 @@ def identity(x):
     return x
 
 import inspect
+from timbr.compat import PY3
+if PY3:
+    getargspec = inspect.getfullargspec
+else:
+    getargspec = inspect.getargspec
 
 def wrap_transform(fn):
     """
@@ -39,7 +44,7 @@ def wrap_transform(fn):
     """
     assert callable(fn)
     try:
-        info = inspect.getargspec(fn)
+        info = getargspec(fn)
         nargs = len(info.args)
     except TypeError:
         # fallback to pipeline mode
