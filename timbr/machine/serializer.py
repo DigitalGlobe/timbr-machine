@@ -1,4 +1,4 @@
-import six
+from timbr.compat import PY3, int
 import types
 import base64
 import os.path
@@ -7,25 +7,20 @@ import mimetypes
 import simplejson as json
 import numpy as np
 
-if six.PY2:
-    from cStringIO import StringIO
-    import urllib2
-    ADDINFOURL = urllib2.addinfourl
-    import io
-    StringIO = io.BytesIO
-    INT_TYPES = (int, long)
-
-if six.PY3:
+if PY3:
     import io
     StringIO = io.BytesIO
     from urllib.request import addinfourl
     ADDINFOURL = addinfourl
-    INT_TYPES = (int)
-    long = int
+
+else:
+    from cStringIO import StringIO
+    import urllib2
+    ADDINFOURL = urllib2.addinfourl
 
 
 def custom_encode(obj):
-    if isinstance(obj, INT_TYPES):
+    if isinstance(obj, int):
         return {"__type__": "long",
                 "__data__": str(obj)}
     elif isinstance(obj, ADDINFOURL):
@@ -57,7 +52,7 @@ def custom_decode(obj):
     try:
         if "__type__" in obj:
             if obj["__type__"] == "long":
-                obj = long(obj["__data__"])
+                obj = int(obj["__data__"])
             elif obj["__type__"] == "ndarray":
                 data = StringIO(base64.b64decode(obj["__data__"]))
                 obj = np.load(data)

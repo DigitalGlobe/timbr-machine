@@ -1,9 +1,9 @@
 from __future__ import print_function
+from timbr.compat import PY3, int
 
 from multiprocessing.pool import ThreadPool
 import dask as da
 # NOTE: sync mode wil likely be faster
-# from dask.async import get_sync as get
 from dask.threaded import get
 
 _pool = ThreadPool()
@@ -104,14 +104,14 @@ class BaseMachine(object):
         return self.stages
 
     def __setitem__(self, pos, fn):
-        assert isinstance(pos, (int, long))
+        assert isinstance(pos, int)
         assert pos >=0 and pos < self.stages
         wrapped_fn = wrap_transform(fn)
         self.tbl["f{}".format(pos)] = wrapped_fn
         self.dirty = True
 
     def __getitem__(self, pos):
-        assert isinstance(pos, (int, long))
+        assert isinstance(pos, int)
         assert pos >=0 and pos < self.stages
         return self.tbl["f{}".format(pos)]
 
@@ -119,7 +119,7 @@ class BaseMachine(object):
         return wrap_transform(identity)
 
     def __delitem__(self, pos):
-        assert isinstance(pos, (int, long))
+        assert isinstance(pos, int)
         assert pos >=0 and pos < self.stages
         del self.tbl["f{}".format(pos)]
         self.dirty = True
