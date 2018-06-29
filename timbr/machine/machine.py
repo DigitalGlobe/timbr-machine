@@ -152,7 +152,7 @@ class SourceConsumer(StoppableThread):
             try:
                 # NOTE: next() may block which is okay but put may raise Full
                 # which will interrupt the source
-                msg = self.g.next()
+                msg = next(self.g)
                 self.machine.put(msg)
             except (StopIteration, Full) as e:
                 errored = True
