@@ -8,13 +8,13 @@ class StoppableThread(threading.Thread):
 
     def __init__(self):
         super(StoppableThread, self).__init__()
-        self._stop = threading.Event()
+        self._stopper = threading.Event()
 
     def stop(self):
-        self._stop.set()
+        self._stopper.set()
 
     def stopped(self):
-        return self._stop.isSet()
+        return self._stopper.is_set()
 
 
 def identity(x):
