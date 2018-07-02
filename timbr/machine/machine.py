@@ -296,7 +296,7 @@ class Machine(BaseMachine):
     def active(self):
         if self._consumer_thread is None:
             return False
-        return self._consumer_thread.is_alive()
+        return self._consumer_thread.is_alive() and not self._consumer_thread.paused()
 
     @property
     def processing(self):
