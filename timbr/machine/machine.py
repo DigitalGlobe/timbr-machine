@@ -1,3 +1,5 @@
+import six
+
 from threading import Thread, Lock, Event, ThreadError
 from dask.multiprocessing import RemoteException
 import time
@@ -16,7 +18,8 @@ import zmq
 from timbr.machine.base_machine import BaseMachine
 from timbr.machine.profiler import MachineProfiler
 from timbr.machine.exception import UpstreamError
-from timbr.machine.util import StoppableThread, mkdir_p, json_serializable_exception, identity
+from timbr.machine.util import StoppableThread, mkdir_p, json_serializable_exception,
+                                identity, in_ipython_runtime_env
 from bson.objectid import ObjectId
 from collections import deque
 #from observed import event
@@ -26,6 +29,7 @@ import sys
 import traceback
 import imp
 
+IN_IPYTHON_RUNTIME = in_ipython_runtime_env()
 levels = ["ERROR", "WARNING", "INFO"]
 
 def _get_traceback():
@@ -38,6 +42,16 @@ def _format_dispatch_emsg(inst, level="ERROR", **kwargs):
     m["level"] = level
     m.update(**kwargs)
     return m
+
+class IPythonPluginFactory(type):
+    def __new__(cls, name, bases, attrs):
+        if IN_IPYTHON_RUNTIME:
+            from timbr.extensions.ipy import IPythonMachineMixin
+            bases = list(bases)
+            bases.append(IPythonMachineMixin)
+            bases = tuple(bases)
+        return type.__new__(cls, name, bases, attrs)
+
 
 class MachineConsumer(StoppableThread):
     def __init__(self, machine, kernel_key=None):
@@ -78,15 +92,18 @@ class MachineConsumer(StoppableThread):
         self._socket.bind(endpoint)
 
     def _dispatch_err(self, e, **kwargs):
-        m = {"location": self.machine._profiler._errored}
-        m["exc_class"] = str(e.__class__)
-        m["exc_type"] = str(e.exception.__class__)
-        m["exc_tb"] = _get_traceback()
-        m["exc_value"] = e.__repr__()
-        dmsg = _format_dispatch_emsg(self, **kwargs)
-        emsg = {"exception": m}
-        dmsg.update(emsg)
-        self.machine.dispatch(self.machine.serialize_fn(dmsg))
+        if hasattr(self.machine, "dispatch"):
+            m = {"location": self.machine._profiler._errored}
+            m["exc_class"] = str(e.__class__)
+            m["exc_type"] = str(e.exception.__class__)
+            m["exc_tb"] = _get_traceback()
+            m["exc_value"] = e.__repr__()
+            dmsg = _format_dispatch_emsg(self, **kwargs)
+            emsg = {"exception": m}
+            dmsg.update(emsg)
+            self.machine.dispatch(self.machine.serialize_fn(dmsg))
+        else:
+            pass # Should we do something else here?
 
     def run(self):
         while not self.stopped():
@@ -136,16 +153,19 @@ class SourceConsumer(StoppableThread):
         return _status
 
     def _dispatch_err(self, e, **kwargs):
-        m = {}
-        m["location"] = "source"
-        m["exc_class"] = str(e.__class__)
-        m["exc_type"] = str(type(e))
-        m["exc_tb"] = _get_traceback()
-        m["exc_value"] = e.__repr__()
-        dmsg = _format_dispatch_emsg(self, **kwargs)
-        emsg = {"exception": m}
-        dmsg.update(emsg)
-        self.machine.dispatch(self.machine.serialize_fn(dmsg))
+        if hasattr(self.machine, "dispatch"):
+            m = {}
+            m["location"] = "source"
+            m["exc_class"] = str(e.__class__)
+            m["exc_type"] = str(type(e))
+            m["exc_tb"] = _get_traceback()
+            m["exc_value"] = e.__repr__()
+            dmsg = _format_dispatch_emsg(self, **kwargs)
+            emsg = {"exception": m}
+            dmsg.update(emsg)
+            self.machine.dispatch(self.machine.serialize_fn(dmsg))
+        else:
+            pass # Should we do something else here?
 
     def run(self):
         while not self.stopped():
@@ -166,11 +186,12 @@ class SourceConsumer(StoppableThread):
             except Exception as e:
                 self._dispatch_err(e)
                 tb = _get_traceback
-                self._error = {"serialized_exception": self.machine.serialize_fn(json_serializable_exception(e, _traceback=tb))}
+                self._error = {"serialized_exception":
+                               self.machine.serialize_fn(json_serializable_exception(e, _traceback=tb))}
                 self.stop()
                 raise
 
-
+@six.add_metaclass(IPythonPluginFactory)
 class Machine(BaseMachine):
     def __init__(self, stages=8, bufsize=1024, start_consumer=True, debug=False):
         super(Machine, self).__init__(stages, bufsize)
@@ -188,7 +209,6 @@ class Machine(BaseMachine):
 
 #    @event
     def start(self):
-        self.create_dispatcher()
         if self._consumer_thread is None or not self._consumer_thread.is_alive():
             self._profiler.register()
             self._consumer_thread = MachineConsumer(self)
@@ -230,15 +250,18 @@ class Machine(BaseMachine):
             self.q._init(self._bufsize)
 
     def _dispatch_err(self, e, **kwargs):
-        m = {"location": "Machine"}
-        m["exc_class"] = str(e.__class__)
-        m["exc_type"] = str(type(e))
-        m["exc_tb"] = _get_traceback()
-        m["exc_value"] = e.__repr__()
-        dmsg = _format_dispatch_emsg(self, **kwargs)
-        emsg = {"exception": m}
-        dmsg.update(emsg)
-        self.dispatch(self.serialize_fn(dmsg))
+        if hasattr(self, "dispatch"):
+            m = {"location": "Machine"}
+            m["exc_class"] = str(e.__class__)
+            m["exc_type"] = str(type(e))
+            m["exc_tb"] = _get_traceback()
+            m["exc_value"] = e.__repr__()
+            dmsg = _format_dispatch_emsg(self, **kwargs)
+            emsg = {"exception": m}
+            dmsg.update(emsg)
+            self.dispatch(self.serialize_fn(dmsg))
+        else:
+            pass # Should we do something else here?
 
     @property
     def source(self):
