@@ -1,7 +1,6 @@
 import six
 
 from threading import Thread, Lock, Event, ThreadError
-from dask.multiprocessing import RemoteException
 import time
 import json
 import warnings
@@ -94,7 +93,7 @@ class MachineConsumer(StoppableThread):
         if hasattr(self.machine, "dispatch"):
             m = {"location": self.machine._profiler._errored}
             m["exc_class"] = str(e.__class__)
-            m["exc_type"] = str(e.exception.__class__)
+            m["exc_type"] = str(e.__class__)
             m["exc_tb"] = _get_traceback()
             m["exc_value"] = e.__repr__()
             dmsg = _format_dispatch_emsg(self, **kwargs)
@@ -108,23 +107,22 @@ class MachineConsumer(StoppableThread):
         while not self.stopped():
             self._trigger.wait() # Wait for this flag to be set to Fal
             try:
-                # NOTE: self.get should never throw exceptions from inside the dask
+                # NOTE: self.get can raise errors from inside the dask now
                 output = self.machine.get(block=True, timeout=0.1)
                 hdr = output[0]
                 msg = "[{}]".format(",".join(output[1:]))
-                payload = [hdr, msg.encode("utf-8")]
+                payload = [hdr.encode("utf-8"), msg.encode("utf-8")]
                 self.machine._status['last_oid'] = hdr
                 self.machine._status['processed'] = self.machine._status['processed'] + 1
                 self.machine._data_prev.append(payload)
                 self._socket.send_multipart(payload)
-            except Empty: # This is an instance of RemoteException, so needs to be caught first
+            except Empty:
                 continue
-            except RemoteException as re:
-                # re derives from dask's RemoteException
+            except Exception as re:
                 output = self.machine._build_output_on_error(re)
                 hdr = output[0]
                 msg = "[{}]".format(",".join(output[1:]))
-                payload = [hdr, msg.encode("utf-8")]
+                payload = [hdr.encode("utf-8"), msg.encode("utf-8")]
                 self.machine._status['errored'] = self.machine._status['errored'] + 1
                 self.machine._error_prev.append(payload)
                 self._socket.send_multipart(payload)
@@ -309,8 +307,8 @@ class Machine(BaseMachine):
         return self._debug
 
     def enable_debug_mode(self):
-        if self.running and not self._debug:
-            warnings.warn("Debug mode cannot be enabled on a machine while it is running.")
+        if self.processing and not self._debug:
+            warnings.warn("Debug mode cannot be enabled on a machine while it is consuming a source.")
             return
         self._debug = True
 
