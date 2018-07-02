@@ -1,9 +1,4 @@
-
-from collections import namedtuple, OrderedDict
-from itertools import starmap
-
 import threading
-import inspect
 
 # Stolen from StackOverflow:
 # http://stackoverflow.com/questions/323972/is-there-any-way-to-kill-a-thread-in-python
@@ -13,22 +8,28 @@ class StoppableThread(threading.Thread):
 
     def __init__(self):
         super(StoppableThread, self).__init__()
-        self._stop = threading.Event()
+        self._stopper = threading.Event()
 
     def stop(self):
-        self._stop.set()
+        self._stopper.set()
 
     def stopped(self):
-        return self._stop.isSet()
+        return self._stopper.is_set()
 
 
 def identity(x):
     return x
 
+import inspect
+from timbr.compat import PY3
+if PY3:
+    getargspec = inspect.getfullargspec
+else:
+    getargspec = inspect.getargspec
 
 def wrap_transform(fn):
     """
-    This function returns a new function that accepts 
+    This function returns a new function that accepts
     an arbitrary number of arguments
     and calls the wrapped function with the number of arguments that it supports. For
     example:
@@ -43,7 +44,7 @@ def wrap_transform(fn):
     """
     assert callable(fn)
     try:
-        info = inspect.getargspec(fn)
+        info = getargspec(fn)
         nargs = len(info.args)
     except TypeError:
         # fallback to pipeline mode
@@ -61,13 +62,14 @@ def json_serializable_exception(e, **kwargs):
         exc["exc_class"] = str(e.__class__)
         exc["exc_type"] = str(e.exception.__class__)
         exc["exc_tb"] = e.traceback
-    except AttributeError, ae:
+    except AttributeError as ae:
         pass
     emsg["_exception"].update(exc)
     emsg["_exception"].update(kwargs)
     return emsg
 
-import os, errno
+import os
+import errno
 
 def mkdir_p(path):
     try:
@@ -77,16 +79,64 @@ def mkdir_p(path):
             pass
         else: raise
 
+# Modifed from StackOverflow:
+# http://stackoverflow.com/questions/12700893/how-to-check-if-a-string-is-a-valid-python-identifier-including-keyword-check
 
+import ast
+import types
 
+def isidentifier(ident):
+    """Determines, if string is valid Python identifier."""
 
+    # Smoke test - if it's not string, then it's not identifier, but we
+    # want to just silence exception. It's better to fail fast.
+    if not isinstance(ident, types.StringTypes):
+        raise TypeError('expected str, but got {!r}'.format(type(ident)))
+
+    # Resulting AST of simple identifier is <Module [<Expr <Name "foo">>]>
+    try:
+        root = ast.parse(ident)
+    except SyntaxError:
+        return False
+
+    if not isinstance(root, ast.Module):
+        return False
+
+    if len(root.body) != 1:
+        return False
+
+    if not isinstance(root.body[0], ast.Expr):
+        return False
+
+    if not isinstance(root.body[0].value, ast.Name):
+        return False
+
+    if root.body[0].value.id != ident:
+        return False
+
+    return True
+
+import re
+
+def camelcase_to_underscored(string):
+    """ camelCase to Pythonic naming """
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+from timbr.machine import serializer
+
+def make_wamp_safe(obj):
+    """ Crappy way of forcing an object that is safe for our serializer to be ok for the Autobahn WAMP one """
+    return serializer.wamp_safe_loads(serializer.dumps(obj))
+
+from collections import namedtuple, OrderedDict
 
 class OrderedDefaultDict(OrderedDict):
     def __init__(self, default_factory, *args, **kwargs):
         super(OrderedDefaultDict, self).__init__(*args, **kwargs)
         assert callable(default_factory)
         self.default_factory = default_factory
-        
+
     def __getitem__(self, key):
         try:
             return super(OrderedDefaultDict, self).__getitem__(key)
@@ -99,3 +149,16 @@ class OrderedDefaultDict(OrderedDict):
         self[key] = value = self.default_factory()
         return value
 
+# adapted from
+# https://stackoverflow.com/questions/15411967/how-can-i-check-if-code-is-executed-in-the-ipython-notebook
+def in_ipython_runtime_env():
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return True  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter

@@ -31,12 +31,44 @@ The machine instance exposes a `put()` method that places any piece of data onto
 ### The Automatic Way
 
 ```Python
-MACHINE.source = generator
-# call start after setting the source to being iteration and consumption
+MACHINE.source = g
+```
+Here, we set the source to either an iterable or generator interface, or a function that returns a generator. For instance, g could be any of the following:
+
+* A function that returns a generator
+```Python
+def my_generator_function():
+    yield "hello world"
+MACHINE.source = my_generator_function 
+```
+
+* A generator instance
+```Python 
+my_generator = my_generator_function()
+MACHINE.source = my_generator
+```
+
+* An iterable instance
+```Python
+my_iterable = [1,2,3]
+MACHINE.source = my_iterable
+```
+
+After setting our source, we need to start the Machine instance again to start automatic consumption of our source:
+
+```Python
 MACHINE.start()
 ```
 
-If we have an iterator or generator interface to the data we can provide it to the machine and it will consume it automatically.  To do this we invoke the `set_source()` method.
+In the event that we'd like to change the source that we're automatically consuming, we need to first manually remove any sources that we're already currently consuming:
+
+```Python 
+del MACHINE.source
+MACHINE.source = my_new_source
+MACHINE.start()
+```
+
+This is to protect against unintentionally interrupting a pre-configured running Machine instance. Reprogramming a machine slot with a new function (see below), however, is allowed at any time. 
 
 ## Configuring the Machine
 

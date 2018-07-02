@@ -3,7 +3,7 @@ from setuptools.command.develop import develop as _develop
 from setuptools.command.install import install as _install
 import os
 
-try: 
+try:
     from notebook.nbextensions import install_nbextension
     from notebook.services.config import ConfigManager
 except ImportError:
@@ -42,19 +42,34 @@ setup(name='timbr-machine',
       author='Pramukta Kumar',
       author_email='pramukta.kumar@timbr.io',
       license='MIT',
-      packages=['timbr', 'timbr.machine'],
+      packages=['timbr', 'timbr.machine', 'timbr.datastore', 'timbr.compat', 'timbr.cli', 'timbr.snapshot', 'timbr.extensions'],
       zip_safe=False,
+      entry_points={
+        "console_scripts": [
+            "machine-captd = timbr.machine.capture:main",
+            "machine-snapd = timbr.machine.snapshot:main",
+            "machine-pkgd = timbr.machine.packager:main",
+            ]
+        },
       data_files=[
         ('share/jupyter/nbextensions/timbr_machine', [
             'timbr/static/index.js'
-        ]),
+        ])
       ],
+      include_package_data=True,
       install_requires=[
           "pymongo>=2.8",
-          "dask",
+          "dask>=0.13.0",
           "ipython",
           "observed",
-          "jupyter_react"
+          "h5py",
+          "jupyter_react",
+          "tables>=3.2.1",
+          "simplejson>=3.6.5",
+          "watchdog>=0.8.1",
+          "jsonpath-rw>=1.4.0",
+          "pycurl",
+          "rasterio>=1.0a1",
         ],
       tests_require=[
           "nose",
