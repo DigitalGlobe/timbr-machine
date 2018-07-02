@@ -173,6 +173,7 @@ class SourceConsumer(StoppableThread):
                 # which will interrupt the source
                 msg = next(self.g)
                 self.machine.put(msg)
+                self._full = False
             except (StopIteration, Full) as e:
                 errored = True
                 if isinstance(e, StopIteration):
