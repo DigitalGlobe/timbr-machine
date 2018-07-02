@@ -18,8 +18,7 @@ import zmq
 from timbr.machine.base_machine import BaseMachine
 from timbr.machine.profiler import MachineProfiler
 from timbr.machine.exception import UpstreamError
-from timbr.machine.util import StoppableThread, mkdir_p, json_serializable_exception,
-                                identity, in_ipython_runtime_env
+from timbr.machine.util import StoppableThread, mkdir_p, json_serializable_exception, identity, in_ipython_runtime_env
 from bson.objectid import ObjectId
 from collections import deque
 #from observed import event
@@ -233,14 +232,19 @@ class Machine(BaseMachine):
 #    @event
     def stop(self, clear_buffer=True, hard_stop=False):
         if self._consumer_thread is not None and self._consumer_thread.is_alive():
-            self._consumer_thread.pause() # pause consumer thread
+            is_paused = self._consumer_thread.paused()
             if hard_stop:
+                if is_paused:
+                    self._consumer_thread.trigger() # have to unpause to join on run
                 self._consumer_thread.stop()
                 self._consumer_thread.join(timeout=1.0)
                 try:
                     self._profiler.unregister()
                 except KeyError as ke:
                     pass
+            else:
+                if not is_paused:
+                    self._consumer_thread.pause() # otherwise pause consumer if not already
 
         if self._source_thread is not None and self._source_thread.is_alive():
             self._source_thread.stop()
@@ -289,10 +293,16 @@ class Machine(BaseMachine):
         self._error_prev.clear()
 
     @property
-    def running(self):
-        if self._source_thread is None:
+    def active(self):
+        if self._consumer_thread is None:
             return False
-        return self._source_thread.is_alive()
+        return self._consumer_thread.is_alive()
+
+    @property
+    def processing(self):
+        if self.active and self._source_thread is not None:
+            return self._source_thread.is_alive()
+        return False
 
     @property
     def debug(self):
