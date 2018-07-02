@@ -1,13 +1,8 @@
 from __future__ import print_function
 from timbr.compat import PY3, int
 
-from multiprocessing.pool import ThreadPool
-import dask as da
+import dask
 # NOTE: sync mode wil likely be faster
-from dask.threaded import get
-
-_pool = ThreadPool()
-da.set_options(pool=_pool)
 
 try:
     from Queue import Empty, Full, Queue # Python 2
@@ -47,7 +42,7 @@ def is_serialization_task(task):
 
 
 class BaseMachine(object):
-    def __init__(self, stages=8, bufsize=1024, serialize_fn=json_serialize):
+    def __init__(self, stages=8, bufsize=1024, serialize_fn=json_serialize, num_workers=1):
         self.q = Queue(bufsize)
         self._bufsize = bufsize
         self.tbl = {}
@@ -55,7 +50,7 @@ class BaseMachine(object):
         self.stages = stages
         self._dsk = None
         self._dirty = True
-        self._getter = partial(get, num_workers=1)
+        self._getter = partial(dask.threaded.get, num_workers=num_workers)
         self.dispatcher = None
 
         self.serialize_fn = serialize_fn
