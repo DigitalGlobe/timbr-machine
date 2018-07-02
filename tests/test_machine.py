@@ -47,16 +47,16 @@ class TestSourceConsumer(unittest.TestCase):
     def test_SourceConsumer_stops_on_StopIteration(self):
         self.mm.put = MagicMock()
         self.sc.start()
-        self.sc.join()
-        self.assertFalse(self.sc.stopped())
+        time.sleep(0.1)
+        self.assertTrue(self.sc.stopped())
         self.assertFalse(self.sc.is_alive())
+        self.assertTrue(self.sc._exhausted)
 
-    def test_SourceConsumer_stops_on_Full(self):
+    def test_SourceConsumer_on_Full(self):
         self.mm.put = MagicMock(side_effect = Full)
         self.sc.start()
-        self.sc.join()
-        self.assertFalse(self.sc.stopped()) # stop() never gets called
-        self.assertFalse(self.sc.is_alive())
+        time.sleep(0.1)
+        self.assertTrue(self.sc._full) # Even though we keep going, StopIteration hits so we just check full
 
     def test_SourceConsumer_behavior_on_other_exceptions(self):
         def raise_Exception_gn():
@@ -64,7 +64,7 @@ class TestSourceConsumer(unittest.TestCase):
                 yield float(i)/(5-i)
         self.sc = SourceConsumer(self.mm, raise_Exception_gn())
         self.sc.start()
-        self.sc.join()
+        time.sleep(0.1)
         self.assertFalse(self.sc.stopped()) # Although the thread is dead, stopped reports incorrect info
         self.assertFalse(self.sc.is_alive())
 
@@ -96,22 +96,22 @@ class TestMachine(unittest.TestCase):
         warnings.filters = original_filters
 
     def setUp(self):
-        self.m = Machine()
+        self.m = Machine(start_consumer=False)
 
     def test_Machine_basics(self):
         self.assertIsInstance(self.m, BaseMachine)
-        self.assertFalse(self.m.running)
+        self.assertFalse(self.m.active)
         self.assertIsInstance(self.m._profiler, MachineProfiler)
 
     def test_Machine_start_stop(self):
         self.m.start()
-        self.assertTrue(self.m.running)
+        self.assertTrue(self.m.active)
         self.m.stop()
-        self.assertFalse(self.m.running)
+        self.assertFalse(self.m.active)
 
     def test_Machine_set_source_functionality(self):
-        self.m.set_source(configurable_gn(10))
-        self.m._source.join()
+        self.m.source = configurable_gn(10)
+        self.m._source_thread.start()
         self.assertEqual(self.m.status["queue_size"], 10)
 
     def test_Machine_behavior_on_Empty(self):
@@ -127,11 +127,7 @@ class TestMachine(unittest.TestCase):
         self.m.put(10) # No exception raised
         time.sleep(1.0)
         self.assertEqual(self.m.status["errored"], 1)
-        self.assertTrue(self.m.running)
-        # Test we can't enter debug mode from default:
-        with self.assertWarns(UserWarning):
-            self.m.enable_debug_mode()
-        self.assertFalse(self.m.debug)
+        self.assertTrue(self.m.active)
 
         # Test entering debug mode after stop:
         self.m.stop()
@@ -140,11 +136,11 @@ class TestMachine(unittest.TestCase):
         self.assertTrue(self.m.debug)
         self.m.put(10) # Will raise error in thread
         time.sleep(1.0)
-        self.assertFalse(self.m.running)
+        self.assertFalse(self.m.active)
 
     def tearDown(self):
         try:
-            self.m.stop()
+            self.m.stop(hard_stop=True)
             del self.m
         except (AttributeError, NameError):
             pass
