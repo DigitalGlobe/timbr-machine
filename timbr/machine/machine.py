@@ -177,11 +177,10 @@ class SourceConsumer(StoppableThread):
                 errored = True
                 if isinstance(e, StopIteration):
                     self._exhausted = True
+                    self.stop()
                 else:
                     self._full = True
                 self._dispatch_err(e, level="INFO")
-                self.stop()
-                break
             except Exception as e:
                 self._dispatch_err(e)
                 tb = _get_traceback
