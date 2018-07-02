@@ -49,14 +49,14 @@ class TestSourceConsumer(unittest.TestCase):
         self.sc.start()
         self.sc.join()
         self.assertFalse(self.sc.stopped())
-        self.assertFalse(self.sc.isAlive())
+        self.assertFalse(self.sc.is_alive())
 
     def test_SourceConsumer_stops_on_Full(self):
         self.mm.put = MagicMock(side_effect = Full)
         self.sc.start()
         self.sc.join()
         self.assertFalse(self.sc.stopped()) # stop() never gets called
-        self.assertFalse(self.sc.isAlive())
+        self.assertFalse(self.sc.is_alive())
 
     def test_SourceConsumer_behavior_on_other_exceptions(self):
         def raise_Exception_gn():
@@ -66,7 +66,7 @@ class TestSourceConsumer(unittest.TestCase):
         self.sc.start()
         self.sc.join()
         self.assertFalse(self.sc.stopped()) # Although the thread is dead, stopped reports incorrect info
-        self.assertFalse(self.sc.isAlive())
+        self.assertFalse(self.sc.is_alive())
 
     def tearDown(self):
         try:

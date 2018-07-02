@@ -1,6 +1,5 @@
 from traitlets import Dict, observe
 from jupyter_react import Component
-from time import sleep
 
 class Editor(Component):
     """

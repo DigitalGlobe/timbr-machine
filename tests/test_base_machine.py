@@ -86,7 +86,7 @@ class TestBaseMachine(unittest.TestCase):
         expected.extend(serialized)
         self.assertEqual(res_s, tuple(expected))
 
-        with self.assertRaises(RemoteException):
+        with self.assertRaises(TypeError):
             self.bm("incorrect data type")
 
         # Test put, get
