@@ -1,6 +1,5 @@
 import types
 import warnings
-from itertools import izip
 import threading
 import os
 import re
