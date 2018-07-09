@@ -1,3 +1,7 @@
+from timbr.compat import PY3
+if PY3:
+    unicode = str
+    long = int
 import types
 import warnings
 import threading
@@ -18,6 +22,7 @@ from timbr.machine.util import isidentifier, camelcase_to_underscored
 from timbr.snapshot.exception import IncompleteSyncError
 
 
+
 class NotSupportedException(NotImplementedError):
     pass
 
@@ -28,8 +33,8 @@ class NotSupportedException(NotImplementedError):
 #         "name": "...",
 #         "path": "..."}, ... ]
 
-CAST_MAP = {'bool': bool, 'int': int, 'float': float, 'str': unicode}
-VALID_DEFAULT_TYPES = (bool, int, long, float, str, unicode, types.NoneType)
+CAST_MAP = {'bool': bool, 'int': int, 'float': float, 'str': str}
+VALID_DEFAULT_TYPES = (bool, int, long, float, str, unicode, type(None))
 
 
 class StructuringFunction(object):
